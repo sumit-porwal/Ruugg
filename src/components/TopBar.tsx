@@ -384,7 +384,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
 
         {/* Zoom controls */}
-        <div className="hidden md:flex items-center gap-0.5 border-r border-stone-200 pr-1.5 text-stone-600">
+        <div className="hidden sm:flex items-center gap-0.5 border-r border-stone-200 pr-1.5 text-stone-600">
           <button
             title="Zoom Out (-)"
             onClick={onZoomOut}

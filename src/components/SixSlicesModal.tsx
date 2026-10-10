@@ -33,12 +33,12 @@ export const SixSlicesModal: React.FC<SixSlicesModalProps> = ({
   const currentSliceInfo = SIX_SLICES_INFO[selectedSlice];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-3xl h-[580px] max-h-[calc(100vh-2rem)] sm:max-h-[86vh] overflow-hidden flex flex-col my-auto">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+        <div className="shrink-0 px-5 py-3.5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
+            <div className="p-2 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-500/20 shrink-0">
               <Sparkles size={18} />
             </div>
             <div>
@@ -52,16 +52,16 @@ export const SixSlicesModal: React.FC<SixSlicesModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto flex flex-col md:flex-row">
+        <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
           {/* Left Navigation: The 6 Slices */}
-          <div className="w-full md:w-56 border-r border-stone-100 p-2 space-y-1 bg-stone-50/30 shrink-0">
+          <div className="w-52 sm:w-56 border-r border-stone-100 p-2 space-y-1 bg-stone-50/30 shrink-0 overflow-y-auto min-h-0">
             {(Object.keys(SIX_SLICES_INFO) as SixSliceType[]).map((sliceKey) => {
               const slice = SIX_SLICES_INFO[sliceKey];
               const isSelected = selectedSlice === sliceKey;

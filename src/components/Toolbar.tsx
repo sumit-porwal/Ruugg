@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   MousePointer,
+  Hand,
   PenTool,
   Highlighter,
   Wand2,
@@ -25,6 +26,7 @@ import {
   Copy,
   ArrowUp,
   ArrowDown,
+  Tablet,
 } from 'lucide-react';
 import type { CanvasElement, PaperTexture, ShapeType, Tool } from '../types';
 
@@ -55,6 +57,8 @@ interface ToolbarProps {
   onBringToFront?: (id: string) => void;
   onSendToBack?: (id: string) => void;
   hasCanvasElements?: boolean;
+  onOpenStylusSettings?: () => void;
+  isStylusActive?: boolean;
 }
 
 const COLOR_PALETTE = [
@@ -124,6 +128,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onBringToFront,
   onSendToBack,
   hasCanvasElements = false,
+  onOpenStylusSettings,
+  isStylusActive = false,
 }) => {
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [showContextShapeMenu, setShowContextShapeMenu] = useState(false);
@@ -154,6 +160,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           }`}
         >
           <MousePointer size={18} />
+        </button>
+
+        {/* Hand / Pan Tool */}
+        <button
+          title="Hand / Pan Tool (H or hold Space) — Drag to move around canvas"
+          onClick={() => {
+            onSelectTool('hand');
+            setShowPenMenu(false);
+          }}
+          className={`p-2.5 rounded-xl transition-all flex items-center justify-center ${
+            currentTool === 'hand'
+              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+              : 'hover:bg-stone-100 text-stone-600'
+          }`}
+        >
+          <Hand size={18} />
         </button>
 
         {/* Felt Pen & Pen Options */}
@@ -292,6 +314,25 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   ))}
                 </div>
               </div>
+
+              {/* Digital Pen / Tablet Studio Shortcut */}
+              {onOpenStylusSettings && (
+                <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-stone-600 flex items-center gap-1.5">
+                    <Tablet size={13} className="text-blue-600" />
+                    Stylus / Tablet Studio
+                  </span>
+                  <button
+                    onClick={() => {
+                      setShowPenMenu(false);
+                      onOpenStylusSettings();
+                    }}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Configure →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -559,6 +600,24 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Digital Pen / Tablet Studio Button */}
+        {onOpenStylusSettings && (
+          <button
+            title="Digital Pen & Tablet Studio (Stylus, Pressure, Palm Rejection)"
+            onClick={onOpenStylusSettings}
+            className={`p-2 rounded-xl transition-all relative flex items-center justify-center ${
+              isStylusActive
+                ? 'bg-blue-50 text-blue-600 hover:bg-blue-100/80 shadow-sm'
+                : 'hover:bg-stone-100 text-stone-600'
+            }`}
+          >
+            <Tablet size={16} />
+            {isStylusActive && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white animate-pulse" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Secondary Context Toolbar (Tailored per active tool & selection context) */}

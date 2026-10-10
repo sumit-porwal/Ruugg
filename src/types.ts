@@ -1,5 +1,6 @@
 export type Tool =
   | 'select'
+  | 'hand'
   | 'pen'
   | 'highlighter'
   | 'smart'
@@ -51,6 +52,8 @@ export interface SemanticMeta {
   evidenceNotes?: string;
   confidence?: 'low' | 'medium' | 'high';
   sourceRef?: string;
+  groupId?: string;
+  rotation?: number; // rotation in radians
 }
 
 export type FrameworkCategory =
@@ -108,6 +111,21 @@ export interface Point {
   x: number;
   y: number;
   pressure?: number;
+  tiltX?: number;
+  tiltY?: number;
+  twist?: number;
+  pointerType?: 'pen' | 'touch' | 'mouse';
+}
+
+export interface StylusSettings {
+  enabled: boolean;
+  pressureEnabled: boolean;
+  pressureCurve: 'soft' | 'normal' | 'firm';
+  streamline: number; // 0 = off, 0.35 = natural, 0.65 = smooth
+  palmRejection: boolean;
+  fingerAction: 'pan' | 'draw';
+  hardwareEraserEnabled: boolean;
+  barrelButtonAction: 'eraser' | 'pan' | 'select';
 }
 
 export interface StrokeElement extends SemanticMeta {
@@ -118,6 +136,8 @@ export interface StrokeElement extends SemanticMeta {
   color: string;
   width: number;
   isRough?: boolean;
+  hasPressure?: boolean;
+  smoothing?: number;
 }
 
 export interface ShapeElement extends SemanticMeta {

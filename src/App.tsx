@@ -8,6 +8,7 @@ import type {
   ShapeType,
   SixSliceType,
   Slide,
+  StylusSettings,
   Tool,
 } from './types';
 import { getInitialProject } from './utils/initialProject';
@@ -28,6 +29,8 @@ import { SqvidStudioModal } from './components/SqvidStudioModal';
 import { FrameworkSwitchModal } from './components/FrameworkSwitchModal';
 import { ThinkingAssistantDrawer } from './components/ThinkingAssistantDrawer';
 import { ExportModal } from './components/ExportModal';
+import { StylusSettingsModal } from './components/StylusSettingsModal';
+import { loadStylusSettings, saveStylusSettings } from './utils/stylusManager';
 import {
   saveToLocalStorage,
   loadFromLocalStorage,
@@ -43,7 +46,15 @@ import {
   exportSlideToSvg,
   exportDeckToZip,
   exportNotesToMarkdown,
+  getSlideBoundingBox,
 } from './utils/exportEngine';
+import {
+  getElementBounds,
+  getSelectionBounds,
+  offsetElement,
+  duplicateElement,
+  rotatePoint,
+} from './utils/elementGeometry';
 import { FolderOpen } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -61,7 +72,10 @@ export const App: React.FC = () => {
   const [strokeWidth, setStrokeWidth] = useState<number>(3);
   const [currentShapeType, setCurrentShapeType] = useState<ShapeType>('rect');
   const [isRough, setIsRough] = useState<boolean>(true);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
+  const setSelectedElementId = useCallback((id: string | null) => {
+    setSelectedElementIds(id ? [id] : []);
+  }, []);
 
   // Canvas Viewport Pan & Zoom
   const [zoom, setZoom] = useState<number>(1);
@@ -80,6 +94,26 @@ export const App: React.FC = () => {
   const [isStampsOpen, setIsStampsOpen] = useState(false);
   const [isPresenting, setIsPresenting] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+
+  // Digital Pen & Tablet Stylus Engine State
+  const [stylusSettings, setStylusSettings] = useState<StylusSettings>(() => loadStylusSettings());
+  const [isStylusModalOpen, setIsStylusModalOpen] = useState(false);
+  const [stylusTelemetry, setStylusTelemetry] = useState<{
+    isConnected: boolean;
+    livePressure: number;
+    pointerType: string;
+    tilt: { x: number; y: number };
+  }>({
+    isConnected: false,
+    livePressure: 0,
+    pointerType: 'mouse',
+    tilt: { x: 0, y: 0 },
+  });
+
+  const handleStylusSettingsChange = (newSettings: StylusSettings) => {
+    setStylusSettings(newSettings);
+    saveStylusSettings(newSettings);
+  };
 
   // File persistence & save states
   const [isDirty, setIsDirty] = useState(false);
@@ -106,6 +140,60 @@ export const App: React.FC = () => {
   // Find active slide
   const activeSlide =
     project.slides.find((s) => s.id === project.activeSlideId) || project.slides[0];
+
+  const handleResetView = useCallback(() => {
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight - 120;
+    const sheetW = 1600;
+    const sheetH = 1000;
+    const autoZoom = Math.min(1.0, Math.max(0.35, Math.min((viewportW - 100) / sheetW, (viewportH - 100) / sheetH)));
+    const newPan = {
+      x: (viewportW - sheetW * autoZoom) / 2,
+      y: Math.max(20, (viewportH - sheetH * autoZoom) / 2),
+    };
+    setZoom(autoZoom);
+    setPan(newPan);
+    showNotification(`Reset view to center (${Math.round(autoZoom * 100)}%)`);
+  }, [showNotification]);
+
+  const handleFitToContent = useCallback(() => {
+    const bbox = getSlideBoundingBox(activeSlide);
+    const hasEls = activeSlide.elements && activeSlide.elements.length > 0;
+    const targetW = hasEls ? Math.max(600, bbox.width + 160) : 1600;
+    const targetH = hasEls ? Math.max(400, bbox.height + 160) : 1000;
+    const targetMinX = hasEls ? bbox.minX - 80 : 0;
+    const targetMinY = hasEls ? bbox.minY - 80 : 0;
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight - 120;
+
+    const scaleX = viewportW / targetW;
+    const scaleY = viewportH / targetH;
+    const newZoom = Math.min(2.0, Math.max(0.3, Math.min(scaleX, scaleY) * 0.95));
+
+    const newPan = {
+      x: (viewportW - targetW * newZoom) / 2 - targetMinX * newZoom,
+      y: (viewportH - targetH * newZoom) / 2 - targetMinY * newZoom,
+    };
+
+    setZoom(newZoom);
+    setPan(newPan);
+    showNotification(`🎯 Fitted view (${Math.round(newZoom * 100)}%)`);
+  }, [activeSlide, showNotification]);
+
+  // Center napkin on initial load
+  useEffect(() => {
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight - 120;
+    const sheetW = 1600;
+    const sheetH = 1000;
+    const initialZoom = Math.min(1.0, Math.max(0.4, Math.min((viewportW - 120) / sheetW, (viewportH - 120) / sheetH)));
+    setZoom(initialZoom);
+    setPan({
+      x: (viewportW - sheetW * initialZoom) / 2,
+      y: Math.max(20, (viewportH - sheetH * initialZoom) / 2),
+    });
+  }, []);
 
   const pushHistory = useCallback(
     (newProject: ProjectState) => {
@@ -549,9 +637,9 @@ export const App: React.FC = () => {
     showNotification(`✨ Placed "${label}" visual stamp!`);
   };
 
-  // Selected element operations
-  const selectedElement =
-    activeSlide.elements.find((e) => e.id === selectedElementId) || null;
+  // Selected elements operations
+  const selectedElements = activeSlide.elements.filter((e) => selectedElementIds.includes(e.id));
+  const selectedElement = selectedElements[0] || null;
 
   const handleUpdateElement = (updated: CanvasElement) => {
     handleElementsChange(
@@ -562,46 +650,160 @@ export const App: React.FC = () => {
   const handleDeleteElement = useCallback(
     (id: string) => {
       handleElementsChange(activeSlide.elements.filter((e) => e.id !== id));
-      if (selectedElementId === id) setSelectedElementId(null);
+      setSelectedElementIds((prev) => prev.filter((i) => i !== id));
     },
-    [activeSlide.elements, handleElementsChange, selectedElementId]
+    [activeSlide.elements, handleElementsChange]
+  );
+
+  const handleDeleteElements = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids);
+      handleElementsChange(activeSlide.elements.filter((e) => !idSet.has(e.id)));
+      setSelectedElementIds([]);
+    },
+    [activeSlide.elements, handleElementsChange]
   );
 
   const handleDuplicateElement = (id: string) => {
     const el = activeSlide.elements.find((e) => e.id === id);
     if (!el) return;
-
-    let duplicate: CanvasElement;
-    if (el.type === 'shape' || el.type === 'model' || el.type === 'text' || el.type === 'stamp') {
-      const dup: any = {
-        ...JSON.parse(JSON.stringify(el)),
-        id: 'dup_' + Math.random().toString(36).substring(2, 9),
-        x: el.x + 24,
-        y: el.y + 24,
-      };
-      if (el.type === 'shape' && el.startPoint && el.endPoint) {
-        dup.startPoint = { x: el.startPoint.x + 24, y: el.startPoint.y + 24 };
-        dup.endPoint = { x: el.endPoint.x + 24, y: el.endPoint.y + 24 };
-      }
-      duplicate = dup;
-    } else if (el.type === 'connector') {
-      duplicate = {
-        ...JSON.parse(JSON.stringify(el)),
-        id: 'dup_' + Math.random().toString(36).substring(2, 9),
-        fromPoint: { x: el.fromPoint.x + 20, y: el.fromPoint.y + 20 },
-        toPoint: { x: el.toPoint.x + 20, y: el.toPoint.y + 20 },
-      };
-    } else {
-      duplicate = {
-        ...JSON.parse(JSON.stringify(el)),
-        id: 'dup_' + Math.random().toString(36).substring(2, 9),
-        points: el.points.map((p) => ({ x: p.x + 20, y: p.y + 20 })),
-      };
-    }
-
+    const duplicate = duplicateElement(el, 24, 24);
     handleElementsChange([...activeSlide.elements, duplicate]);
-    setSelectedElementId(duplicate.id);
+    setSelectedElementIds([duplicate.id]);
   };
+
+  const handleDuplicateElements = useCallback(
+    (ids: string[]) => {
+      const idSet = new Set(ids);
+      const targets = activeSlide.elements.filter((e) => idSet.has(e.id));
+      if (targets.length === 0) return;
+
+      const newElements: CanvasElement[] = [];
+      const newSelectedIds: string[] = [];
+      const newGroupIdMap = new Map<string, string>();
+
+      targets.forEach((el) => {
+        let newGroupId = el.groupId;
+        if (el.groupId) {
+          if (!newGroupIdMap.has(el.groupId)) {
+            newGroupIdMap.set(el.groupId, 'grp_' + Math.random().toString(36).substring(2, 9));
+          }
+          newGroupId = newGroupIdMap.get(el.groupId);
+        }
+        const dup = duplicateElement(el, 24, 24, newGroupId);
+        newElements.push(dup);
+        newSelectedIds.push(dup.id);
+      });
+
+      handleElementsChange([...activeSlide.elements, ...newElements]);
+      setSelectedElementIds(newSelectedIds);
+      showNotification(`📋 Duplicated ${targets.length} object(s)!`);
+    },
+    [activeSlide.elements, handleElementsChange, showNotification]
+  );
+
+  const handleGroupSelected = useCallback(() => {
+    if (selectedElementIds.length < 2) return;
+    const newGroupId = 'grp_' + Math.random().toString(36).substring(2, 9);
+    const updated = activeSlide.elements.map((el) =>
+      selectedElementIds.includes(el.id) ? { ...el, groupId: newGroupId } : el
+    );
+    handleElementsChange(updated);
+    showNotification(`📦 Grouped ${selectedElementIds.length} objects together!`);
+  }, [selectedElementIds, activeSlide.elements, handleElementsChange, showNotification]);
+
+  const handleUngroupSelected = useCallback(() => {
+    if (selectedElementIds.length === 0) return;
+    const targetGroupIds = new Set(
+      activeSlide.elements
+        .filter((el) => selectedElementIds.includes(el.id) && el.groupId)
+        .map((el) => el.groupId as string)
+    );
+    const updated = activeSlide.elements.map((el) => {
+      if (selectedElementIds.includes(el.id) || (el.groupId && targetGroupIds.has(el.groupId))) {
+        const copy = { ...el };
+        delete copy.groupId;
+        return copy;
+      }
+      return el;
+    });
+    handleElementsChange(updated);
+    showNotification('🔓 Ungrouped objects.');
+  }, [selectedElementIds, activeSlide.elements, handleElementsChange, showNotification]);
+
+  const handleAlignElements = useCallback(
+    (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+      if (selectedElements.length < 2) return;
+      const boundsList = selectedElements.map((e) => getElementBounds(e));
+      const minX = Math.min(...boundsList.map((b) => b.minX));
+      const maxX = Math.max(...boundsList.map((b) => b.maxX));
+      const minY = Math.min(...boundsList.map((b) => b.minY));
+      const maxY = Math.max(...boundsList.map((b) => b.maxY));
+      const avgCenterX = (minX + maxX) / 2;
+      const avgCenterY = (minY + maxY) / 2;
+
+      const updated = activeSlide.elements.map((el) => {
+        if (!selectedElementIds.includes(el.id)) return el;
+        const b = getElementBounds(el);
+        let dx = 0;
+        let dy = 0;
+        if (alignment === 'left') dx = minX - b.minX;
+        else if (alignment === 'right') dx = maxX - b.maxX;
+        else if (alignment === 'center') dx = avgCenterX - b.cx;
+        else if (alignment === 'top') dy = minY - b.minY;
+        else if (alignment === 'bottom') dy = maxY - b.maxY;
+        else if (alignment === 'middle') dy = avgCenterY - b.cy;
+
+        return offsetElement(el, dx, dy);
+      });
+      handleElementsChange(updated);
+      showNotification(`Aligned objects to ${alignment}!`);
+    },
+    [selectedElements, selectedElementIds, activeSlide.elements, handleElementsChange, showNotification]
+  );
+
+  const handleRotateElements = useCallback(
+    (deltaDegrees: number) => {
+      if (selectedElements.length === 0) return;
+      if (deltaDegrees === 0) {
+        const updated = activeSlide.elements.map((el) =>
+          selectedElementIds.includes(el.id) ? { ...el, rotation: 0 } : el
+        );
+        handleElementsChange(updated);
+        showNotification('Reset rotation to 0°');
+        return;
+      }
+
+      const deltaRad = (deltaDegrees * Math.PI) / 180;
+      const selBounds = getSelectionBounds(selectedElements);
+      if (!selBounds) return;
+
+      const updated = activeSlide.elements.map((el) => {
+        if (!selectedElementIds.includes(el.id)) return el;
+        if (selectedElements.length === 1) {
+          return {
+            ...el,
+            rotation: (((el.rotation || 0) + deltaRad) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2),
+          };
+        }
+        const b = getElementBounds(el);
+        const newCenter = rotatePoint({ x: b.cx, y: b.cy }, { x: selBounds.cx, y: selBounds.cy }, deltaRad);
+        const dx = newCenter.x - b.cx;
+        const dy = newCenter.y - b.cy;
+        const moved = offsetElement(el, dx, dy);
+        return {
+          ...moved,
+          rotation: (((moved.rotation || 0) + deltaRad) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2),
+        };
+      });
+      handleElementsChange(updated);
+    },
+    [selectedElements, selectedElementIds, activeSlide.elements, handleElementsChange, showNotification]
+  );
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedElementIds(activeSlide.elements.map((e) => e.id));
+  }, [activeSlide.elements]);
 
   const handleBringToFront = (id: string) => {
     const el = activeSlide.elements.find((e) => e.id === id);
@@ -715,7 +917,7 @@ export const App: React.FC = () => {
     setSelectedElementId(null);
     setActiveGuidedFrameworkId(null);
     showNotification('✨ Started a new blank napkin deck!');
-  }, [isDirty, pushHistory, showNotification]);
+  }, [isDirty, pushHistory, setSelectedElementId, showNotification]);
 
   const handleExportSvg = useCallback(() => {
     exportSlideToSvg(activeSlide);
@@ -745,7 +947,7 @@ export const App: React.FC = () => {
     setSelectedElementId(null);
     setActiveGuidedFrameworkId(null);
     showNotification('Restored fresh visual thinking deck!');
-  }, [pushHistory, showNotification]);
+  }, [pushHistory, setSelectedElementId, showNotification]);
 
   // Global Keyboard shortcuts
   useEffect(() => {
@@ -776,17 +978,73 @@ export const App: React.FC = () => {
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
         handleRedo();
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedElementId) {
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleUngroupSelected();
+        } else {
+          handleGroupSelected();
+        }
+        return;
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+        return;
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        if (selectedElementIds.length > 0) {
           e.preventDefault();
-          handleDeleteElement(selectedElementId);
+          handleDuplicateElements(selectedElementIds);
+          return;
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          handleDeleteElements(selectedElementIds);
+          return;
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedElementIds([]);
+        return;
+      } else if (
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight'
+      ) {
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          const step = e.shiftKey ? 10 : 2;
+          const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+          const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+          const updated = activeSlide.elements.map((el) =>
+            selectedElementIds.includes(el.id) ? offsetElement(el, dx, dy) : el
+          );
+          handleElementsChange(updated);
+          return;
         }
       } else if (e.key === 'v' || e.key === 'V') {
         setCurrentTool('select');
       } else if (e.key === 'p' || e.key === 'P') {
         setCurrentTool('pen');
       } else if (e.key === 'h' || e.key === 'H') {
-        setCurrentTool('highlighter');
+        if (e.shiftKey) {
+          setCurrentTool('highlighter');
+        } else {
+          setCurrentTool('hand');
+          showNotification('✋ Hand / Pan tool active! Click & drag anywhere to move around the napkin.');
+        }
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setZoom((z) => Math.min(5.0, z * 1.18));
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        setZoom((z) => Math.max(0.2, z * 0.85));
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault();
+        handleResetView();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+        e.preventDefault();
+        handleFitToContent();
       } else if (e.key === 'a' || e.key === 'A') {
         setCurrentTool('smart');
         showNotification('🪄 Smart Assistant Draw active! Scribbles will auto-snap to shapes.');
@@ -807,9 +1065,17 @@ export const App: React.FC = () => {
     handleOpenFile,
     handleUndo,
     handleRedo,
-    selectedElementId,
+    handleResetView,
+    handleFitToContent,
+    selectedElementIds,
+    handleGroupSelected,
+    handleUngroupSelected,
+    handleSelectAll,
+    handleDuplicateElements,
+    handleDeleteElements,
+    activeSlide.elements,
+    handleElementsChange,
     showNotification,
-    handleDeleteElement,
   ]);
 
   return (
@@ -855,12 +1121,27 @@ export const App: React.FC = () => {
         onUndo={handleUndo}
         onRedo={handleRedo}
         zoom={zoom}
-        onZoomIn={() => setZoom((z) => Math.min(3, z * 1.15))}
-        onZoomOut={() => setZoom((z) => Math.max(0.3, z * 0.85))}
-        onResetZoom={() => {
-          setZoom(1);
-          setPan({ x: 0, y: 0 });
+        onZoomIn={() => {
+          const newZoom = Math.min(5.0, zoom * 1.18);
+          const cx = window.innerWidth / 2;
+          const cy = (window.innerHeight - 120) / 2;
+          setPan((p) => ({
+            x: cx - (cx - p.x) * (newZoom / zoom),
+            y: cy - (cy - p.y) * (newZoom / zoom),
+          }));
+          setZoom(newZoom);
         }}
+        onZoomOut={() => {
+          const newZoom = Math.max(0.2, zoom * 0.85);
+          const cx = window.innerWidth / 2;
+          const cy = (window.innerHeight - 120) / 2;
+          setPan((p) => ({
+            x: cx - (cx - p.x) * (newZoom / zoom),
+            y: cy - (cy - p.y) * (newZoom / zoom),
+          }));
+          setZoom(newZoom);
+        }}
+        onResetZoom={handleResetView}
         onOpenGoalStart={() => setIsGoalStartOpen(true)}
         onOpenFrameworkLibrary={() => setIsFrameworkLibraryOpen(true)}
         onOpenSqvidStudio={() => setIsSqvidStudioOpen(true)}
@@ -907,16 +1188,29 @@ export const App: React.FC = () => {
           onOpenSixSlices={() => setIsSixSlicesOpen(true)}
           onOpenStamps={() => setIsStampsOpen(true)}
           onAddStickyNote={handleAddStickyNote}
+          onOpenStylusSettings={() => setIsStylusModalOpen(true)}
+          isStylusActive={stylusTelemetry.isConnected}
         />
 
-        {/* Selected Element Inspector with Semantic Tags & Context Actions */}
+        {/* Selected Element Inspector with Semantic Tags, Multi-Select & Context Actions */}
         <ElementInspector
           selectedElement={selectedElement}
+          selectedElements={selectedElements}
           onUpdateElement={handleUpdateElement}
+          onUpdateElements={(updated) => {
+            const map = new Map(updated.map((e) => [e.id, e]));
+            handleElementsChange(activeSlide.elements.map((e) => map.get(e.id) || e));
+          }}
           onDeleteElement={handleDeleteElement}
+          onDeleteElements={handleDeleteElements}
           onDuplicateElement={handleDuplicateElement}
+          onDuplicateElements={handleDuplicateElements}
           onBringToFront={handleBringToFront}
           onSendToBack={handleSendToBack}
+          onGroupElements={handleGroupSelected}
+          onUngroupElements={handleUngroupSelected}
+          onAlignElements={handleAlignElements}
+          onRotateElements={handleRotateElements}
           onApplyContextAction={handleApplyContextAction}
         />
 
@@ -925,18 +1219,26 @@ export const App: React.FC = () => {
           elements={activeSlide.elements}
           onElementsChange={handleElementsChange}
           currentTool={currentTool}
+          onSelectTool={setCurrentTool}
           currentColor={currentColor}
           strokeWidth={strokeWidth}
           eraserSize={eraserSize}
           currentShapeType={currentShapeType}
           isRough={isRough}
           paperTexture={activeSlide.paperTexture}
-          selectedElementId={selectedElementId}
-          onSelectElement={setSelectedElementId}
+          selectedElementIds={selectedElementIds}
+          onSelectElements={setSelectedElementIds}
           zoom={zoom}
           pan={pan}
+          onZoomChange={setZoom}
           onPanChange={setPan}
+          onResetZoom={handleResetView}
+          onFitToContent={handleFitToContent}
           onQuickMessage={showNotification}
+          stylusSettings={stylusSettings}
+          onOpenStylusSettings={() => setIsStylusModalOpen(true)}
+          onStylusSettingsChange={handleStylusSettingsChange}
+          onStylusTelemetry={setStylusTelemetry}
         />
 
         {/* Interactive Guided Thinking Step-by-Step Drawer */}
@@ -1055,6 +1357,15 @@ export const App: React.FC = () => {
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         onShowNotification={showNotification}
+      />
+
+      {/* Digital Pen & Tablet Studio Modal */}
+      <StylusSettingsModal
+        isOpen={isStylusModalOpen}
+        onClose={() => setIsStylusModalOpen(false)}
+        settings={stylusSettings}
+        onSaveSettings={handleStylusSettingsChange}
+        liveStylusInfo={stylusTelemetry}
       />
 
       {/* Drag & Drop File Overlay */}

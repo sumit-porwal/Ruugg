@@ -15,12 +15,12 @@ export const VisualVocabularyModal: React.FC<VisualVocabularyModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[80vh]">
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[85vh] my-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+        <div className="shrink-0 px-5 sm:px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/20">
+            <div className="p-2 rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/20 shrink-0">
               <Sparkles size={20} />
             </div>
             <div>
@@ -34,14 +34,14 @@ export const VisualVocabularyModal: React.FC<VisualVocabularyModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-full transition-colors shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Stamps Grid */}
-        <div className="p-6 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {VISUAL_VOCABULARY_STAMPS.map((stamp) => (
             <button
               key={stamp.id}

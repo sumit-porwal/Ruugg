@@ -41,7 +41,6 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
 }) => {
   const [selectedTargetId, setSelectedTargetId] = useState<FrameworkId>(() => {
     if (initialTargetId && initialTargetId in FRAMEWORKS_REGISTRY) return initialTargetId;
-    // Default to a different prioritized framework than current
     const defaultPick = PRIORITIZED_FRAMEWORK_IDS.find((id) => id !== currentFrameworkId);
     return defaultPick || 'questionTree';
   });
@@ -69,51 +68,50 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
 
   const currentDef = currentFrameworkId ? FRAMEWORKS_REGISTRY[currentFrameworkId] : null;
 
-  // Framework list based on category
   const frameworkList =
     categoryFilter === 'prioritized'
       ? PRIORITIZED_FRAMEWORK_IDS.map((id) => FRAMEWORKS_REGISTRY[id]).filter(Boolean)
       : getFrameworksByCategory(categoryFilter);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl border border-stone-200/90 w-full max-w-3xl overflow-hidden flex flex-col max-h-[86vh]">
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-stone-200/90 w-full max-w-3xl h-[560px] max-h-[calc(100vh-2rem)] sm:max-h-[86vh] flex flex-col overflow-hidden my-auto">
+        {/* Header - Fixed at top */}
+        <div className="shrink-0 px-5 py-3.5 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
               <GitCompare size={16} />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-stone-900 font-sans tracking-tight">
                   Switch Thinking Framework
                 </h2>
                 {currentDef && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200 shrink-0">
                     From: {currentDef.name}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-stone-500">
+              <p className="text-[11px] text-stone-500 truncate">
                 Transform diagram structure while preserving every node, note, and semantic tag.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors shrink-0 ml-2"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        {/* Content Body - Side-by-side columns with independent scroll areas */}
+        <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
           {/* Left Column: Target Framework Selection */}
-          <div className="w-full md:w-60 border-r border-stone-100 p-2.5 space-y-1.5 overflow-y-auto bg-stone-50/40 shrink-0 flex flex-col">
+          <div className="w-52 sm:w-60 shrink-0 border-r border-stone-100 flex flex-col min-h-0 bg-stone-50/40">
             {/* Category Filter Pills */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 text-[10px]">
+            <div className="shrink-0 p-2 border-b border-stone-100/80 flex items-center gap-1 overflow-x-auto text-[10px]">
               {(
                 [
                   { id: 'prioritized', label: 'Top 6' },
@@ -137,11 +135,7 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
               ))}
             </div>
 
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block font-sans px-1">
-              Select Target Framework
-            </span>
-
-            <div className="space-y-1 flex-1 overflow-y-auto pr-0.5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
               {frameworkList.map((def) => {
                 const isSelected = selectedTargetId === def.id;
                 const isCurrent = currentFrameworkId === def.id;
@@ -156,11 +150,11 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
                         : 'bg-white hover:bg-stone-100 text-stone-700 border-stone-200/70'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-bold font-sans">{def.name}</div>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="text-xs font-bold font-sans truncate">{def.name}</div>
                       {isCurrent && (
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0 ${
                             isSelected ? 'bg-blue-700 text-blue-100' : 'bg-stone-100 text-stone-500'
                           }`}
                         >
@@ -181,17 +175,17 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
             </div>
           </div>
 
-          {/* Right Column: Proposed Transformation Preview */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 bg-white flex flex-col justify-between">
-            <div className="space-y-3">
+          {/* Right Column: Proposed Transformation Preview & Pinned Action Bar */}
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col justify-between bg-white">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-3">
               {/* Rationale Banner */}
               <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 font-sans flex items-center gap-1.5">
-                    <Sparkles size={11} className="text-blue-600" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 font-sans flex items-center gap-1.5 truncate">
+                    <Sparkles size={11} className="text-blue-600 shrink-0" />
                     Target: {proposal.targetFrameworkName}
                   </span>
-                  <span className="text-[10px] font-bold text-blue-600">
+                  <span className="text-[10px] font-bold text-blue-600 shrink-0">
                     {proposal.mappedNodeCount} thoughts mapped
                   </span>
                 </div>
@@ -224,12 +218,12 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
               </div>
             </div>
 
-            {/* Confirmation Buttons */}
-            <div className="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[11px] text-stone-400">
+            {/* Pinned Bottom Action Bar */}
+            <div className="shrink-0 px-4 py-3 border-t border-stone-100 bg-stone-50/60 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-stone-400 hidden sm:inline">
                 Non-destructive: Use Ctrl+Z anytime to undo.
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={() => {
                     onConfirmSwitch(
@@ -239,7 +233,7 @@ export const FrameworkSwitchModal: React.FC<FrameworkSwitchModalProps> = ({
                     );
                     onClose();
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 text-stone-700 border border-stone-200/90 font-medium text-xs transition-all flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 text-stone-700 border border-stone-200/90 font-medium text-xs transition-all flex items-center gap-1.5 shadow-2xs"
                   title="Create a duplicate slide transformed into the new framework, keeping your original slide intact"
                 >
                   <Copy size={13} />

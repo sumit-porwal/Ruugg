@@ -175,10 +175,10 @@ export const GoalStartModal: React.FC<GoalStartModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl border border-stone-200/90 w-full max-w-3xl overflow-hidden flex flex-col max-h-[86vh]">
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-stone-200/90 w-full max-w-3xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[88vh] my-auto">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+        <div className="shrink-0 px-5 py-3.5 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
               <Sparkles size={16} />

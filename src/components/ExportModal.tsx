@@ -144,12 +144,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-sm flex justify-center items-start sm:items-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-3xl shadow-2xl border border-stone-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[90vh] my-auto animate-in fade-in duration-150">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-stone-200/80 flex items-center justify-between bg-stone-50/50">
+        <div className="shrink-0 px-5 sm:px-6 py-4 border-b border-stone-200/80 flex items-center justify-between bg-stone-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
               <Download size={18} />
             </div>
             <div>
@@ -165,65 +165,65 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <button
             onClick={onClose}
             disabled={isExporting}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-xl transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-xl transition-colors shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 px-6 pt-3 border-b border-stone-200/80 bg-white">
+        <div className="shrink-0 flex items-center gap-1 px-4 sm:px-6 pt-3 border-b border-stone-200/80 bg-white overflow-x-auto">
           <button
             onClick={() => setActiveTab('pdf')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
               activeTab === 'pdf'
                 ? 'border-rose-600 text-rose-700 bg-rose-50/50 rounded-t-xl'
                 : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            <FileText size={15} className="text-rose-600" />
+            <FileText size={15} className="text-rose-600 shrink-0" />
             <span>PDF Presentation</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ppt')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
               activeTab === 'ppt'
                 ? 'border-amber-600 text-amber-700 bg-amber-50/50 rounded-t-xl'
                 : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            <Presentation size={15} className="text-amber-600" />
+            <Presentation size={15} className="text-amber-600 shrink-0" />
             <span>PowerPoint (.pptx)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('image')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
               activeTab === 'image'
                 ? 'border-blue-600 text-blue-700 bg-blue-50/50 rounded-t-xl'
                 : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            <FileImage size={15} className="text-blue-600" />
+            <FileImage size={15} className="text-blue-600 shrink-0" />
             <span>Images & Vector</span>
           </button>
 
           <button
             onClick={() => setActiveTab('batch')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
               activeTab === 'batch'
                 ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-xl'
                 : 'border-transparent text-stone-500 hover:text-stone-800'
             }`}
           >
-            <Archive size={15} className="text-indigo-600" />
+            <Archive size={15} className="text-indigo-600 shrink-0" />
             <span>Batch & Outline</span>
           </button>
         </div>
 
         {/* Tab Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-5">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-5">
           {/* TAB 1: PDF PRESENTATION */}
           {activeTab === 'pdf' && (
             <div className="space-y-5">

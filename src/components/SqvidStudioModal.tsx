@@ -299,12 +299,12 @@ export const SqvidStudioModal: React.FC<SqvidStudioModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-stone-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl border border-stone-200/90 w-full max-w-4xl overflow-hidden flex flex-col max-h-[86vh]">
+    <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center p-3 sm:p-5 bg-stone-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-stone-200/90 w-full max-w-4xl h-[600px] max-h-[calc(100vh-2rem)] sm:max-h-[88vh] flex flex-col overflow-hidden my-auto">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+        <div className="shrink-0 px-5 py-3 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm shrink-0">
               <Compass size={16} />
             </div>
             <div>
@@ -318,14 +318,14 @@ export const SqvidStudioModal: React.FC<SqvidStudioModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors"
+            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 rounded-lg transition-colors shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Topic Input Bar */}
-        <div className="px-5 py-2.5 bg-white border-b border-stone-100 flex items-center gap-2.5">
+        <div className="shrink-0 px-5 py-2.5 bg-white border-b border-stone-100 flex items-center gap-2.5">
           <span className="text-xs font-semibold text-stone-500 font-sans shrink-0">
             Core Idea:
           </span>
@@ -350,9 +350,9 @@ export const SqvidStudioModal: React.FC<SqvidStudioModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+        <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
           {/* Left Column: 5 SQVID Dimension Sliders */}
-          <div className="w-full md:w-64 border-r border-stone-100 p-2.5 space-y-1.5 overflow-y-auto bg-stone-50/40 shrink-0">
+          <div className="w-56 sm:w-64 border-r border-stone-100 p-2.5 space-y-1.5 overflow-y-auto bg-stone-50/40 shrink-0 min-h-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 block font-sans px-1">
               5 SQVID Levers
             </span>

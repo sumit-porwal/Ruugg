@@ -13,19 +13,437 @@ import { SEMANTIC_TAGS_MAP } from './semanticTags';
 /**
  * Render canvas background texture
  */
+export const NAPKIN_WORLD_WIDTH = 1600;
+export const NAPKIN_WORLD_HEIGHT = 1000;
+
+/**
+ * Render canvas background texture.
+ * When pan & zoom are provided (interactive canvas), renders an authentic physical sheet in world coordinates
+ * surrounded by an ambient cafe tabletop with dynamic scrolling grid/grain.
+ * When omitted (export engine / thumbnails), renders full-bleed across (0, 0, width, height).
+ */
 export function renderBackground(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  texture: PaperTexture
+  texture: PaperTexture,
+  pan?: { x: number; y: number },
+  zoom?: number
 ) {
   ctx.save();
 
+  // If interactive mode (pan & zoom provided)
+  if (pan !== undefined && zoom !== undefined) {
+    const sheetW = NAPKIN_WORLD_WIDTH;
+    const sheetH = NAPKIN_WORLD_HEIGHT;
+
+    if (texture === 'blueprint') {
+      // Deep technical navy backdrop
+      ctx.fillStyle = '#060e1c';
+      ctx.fillRect(0, 0, width, height);
+
+      // Dynamic blueprint grid moving with pan & zoom
+      const step = 28 * zoom;
+      if (step >= 8) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.lineWidth = 1;
+        const offsetX = ((pan.x % step) + step) % step;
+        const offsetY = ((pan.y % step) + step) % step;
+        ctx.beginPath();
+        for (let x = offsetX; x < width; x += step) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+        }
+        for (let y = offsetY; y < height; y += step) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+
+        // Major grid lines
+        const majorStep = step * 4;
+        const majorOffsetX = ((pan.x % majorStep) + majorStep) % majorStep;
+        const majorOffsetY = ((pan.y % majorStep) + majorStep) % majorStep;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = majorOffsetX; x < width; x += majorStep) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+        }
+        for (let y = majorOffsetY; y < height; y += majorStep) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw Blueprint Sheet in World Coordinates
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      // Sheet shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = 32;
+      ctx.shadowOffsetY = 12;
+
+      ctx.fillStyle = '#0a1628';
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      ctx.shadowColor = 'transparent';
+
+      // Sheet internal grid
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.18)';
+      ctx.lineWidth = 1;
+      const bStep = 28;
+      ctx.beginPath();
+      for (let x = 0; x <= sheetW; x += bStep) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, sheetH);
+      }
+      for (let y = 0; y <= sheetH; y += bStep) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(sheetW, y);
+      }
+      ctx.stroke();
+
+      // Outer blueprint border & corner guides
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(16, 16, sheetW - 32, sheetH - 32);
+
+      ctx.font = "bold 13px 'Outfit', sans-serif";
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.65)';
+      ctx.textAlign = 'right';
+      ctx.fillText('📐 BLUEPRINT NAPKIN SHEET • 1600 × 1000', sheetW - 28, sheetH - 26);
+
+      ctx.restore();
+    } else if (texture === 'grid') {
+      // Slate desk table background
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle dynamic desk grid moving with pan & zoom
+      const step = 24 * zoom;
+      if (step >= 8) {
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+        const offsetX = ((pan.x % step) + step) % step;
+        const offsetY = ((pan.y % step) + step) % step;
+        for (let x = offsetX; x < width; x += step) {
+          for (let y = offsetY; y < height; y += step) {
+            ctx.fillRect(x, y, 1.5, 1.5);
+          }
+        }
+      }
+
+      // Draw Grid Paper Sheet in World Coordinates
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.16)';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 10;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      ctx.shadowColor = 'transparent';
+
+      // Fine grid on sheet
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.6)';
+      ctx.lineWidth = 1;
+      const gStep = 20;
+      ctx.beginPath();
+      for (let x = 0; x <= sheetW; x += gStep) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, sheetH);
+      }
+      for (let y = 0; y <= sheetH; y += gStep) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(sheetW, y);
+      }
+      ctx.stroke();
+
+      // Major grid
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.22)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let x = 0; x <= sheetW; x += gStep * 5) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, sheetH);
+      }
+      for (let y = 0; y <= sheetH; y += gStep * 5) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(sheetW, y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(0, 0, sheetW, sheetH);
+
+      ctx.font = "italic 13px 'Patrick Hand', cursive";
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'right';
+      ctx.fillText('📐 Dot Grid Napkin Sheet • 1600 × 1000', sheetW - 24, sheetH - 22);
+
+      ctx.restore();
+    } else if (texture === 'kraft') {
+      // Warm dark cafe wood desk
+      ctx.fillStyle = '#caa983';
+      ctx.fillRect(0, 0, width, height);
+
+      // Subtle table plank grain moving with pan
+      const step = 36 * zoom;
+      ctx.fillStyle = 'rgba(100, 65, 30, 0.05)';
+      const offsetY = ((pan.y % step) + step) % step;
+      for (let y = offsetY; y < height; y += step) {
+        ctx.fillRect(0, y, width, 1.5);
+      }
+
+      // Draw Kraft Napkin Sheet in World Coordinates
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      ctx.shadowColor = 'rgba(60, 35, 15, 0.28)';
+      ctx.shadowBlur = 32;
+      ctx.shadowOffsetY = 12;
+
+      ctx.fillStyle = '#eddcc4';
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      ctx.shadowColor = 'transparent';
+
+      // Kraft paper fiber flecks
+      ctx.fillStyle = 'rgba(140, 95, 55, 0.12)';
+      const dotStep = 24;
+      for (let x = dotStep / 2; x < sheetW; x += dotStep) {
+        for (let y = dotStep / 2; y < sheetH; y += dotStep) {
+          ctx.fillRect(x + ((y % 48 === 0) ? 8 : 0), y, 2, 1.5);
+        }
+      }
+
+      // Outer cafe kraft embossed border
+      ctx.strokeStyle = 'rgba(150, 105, 65, 0.25)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(18, 18, sheetW - 36, sheetH - 36);
+
+      ctx.fillStyle = 'rgba(140, 95, 55, 0.4)';
+      ctx.font = "italic 14px 'Patrick Hand', cursive";
+      ctx.textAlign = 'right';
+      ctx.fillText('☕ Café Kraft Napkin • 1600 × 1000', sheetW - 30, sheetH - 26);
+
+      ctx.restore();
+    } else if (texture === 'clean') {
+      // Clean modern neutral studio background
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, width, height);
+
+      // Moving desk dots
+      const step = 24 * zoom;
+      if (step >= 8) {
+        ctx.fillStyle = 'rgba(203, 213, 225, 0.7)';
+        const offsetX = ((pan.x % step) + step) % step;
+        const offsetY = ((pan.y % step) + step) % step;
+        for (let x = offsetX; x < width; x += step) {
+          for (let y = offsetY; y < height; y += step) {
+            ctx.fillRect(x, y, 1.5, 1.5);
+          }
+        }
+      }
+
+      // Clean White Paper Sheet
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 8;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0, 0, sheetW, sheetH);
+
+      ctx.restore();
+    } else {
+      // 'napkin' - Authentic Dan Roam Back of the Napkin
+      // Surrounding cafe table background
+      ctx.fillStyle = '#d3c2a6';
+      ctx.fillRect(0, 0, width, height);
+
+      // Ambient cafe tabletop pattern moving with pan & zoom
+      const step = 28 * zoom;
+      if (step >= 8) {
+        ctx.fillStyle = 'rgba(120, 85, 45, 0.05)';
+        const offsetX = ((pan.x % step) + step) % step;
+        const offsetY = ((pan.y % step) + step) % step;
+        for (let x = offsetX; x < width; x += step) {
+          ctx.fillRect(x, 0, 1, height);
+        }
+        for (let y = offsetY; y < height; y += step) {
+          ctx.fillRect(0, y, width, 1);
+        }
+      }
+
+      // Render physical Dan Roam Napkin Sheet in World Coordinates
+      ctx.save();
+      ctx.translate(pan.x, pan.y);
+      ctx.scale(zoom, zoom);
+
+      // Realistic soft organic drop shadow on cafe tabletop
+      ctx.shadowColor = 'rgba(50, 30, 10, 0.24)';
+      ctx.shadowBlur = 36;
+      ctx.shadowOffsetY = 14;
+
+      const napkinGrad = ctx.createLinearGradient(0, 0, sheetW, sheetH);
+      napkinGrad.addColorStop(0, '#fcf8ee');
+      napkinGrad.addColorStop(0.35, '#f7f0df');
+      napkinGrad.addColorStop(0.7, '#f4ebd7');
+      napkinGrad.addColorStop(1, '#eee2cb');
+      ctx.fillStyle = napkinGrad;
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      ctx.shadowColor = 'transparent';
+
+      // Subtle radial table vignette
+      const vignette = ctx.createRadialGradient(
+        sheetW / 2, sheetH / 2, Math.min(sheetW, sheetH) * 0.3,
+        sheetW / 2, sheetH / 2, Math.max(sheetW, sheetH) * 0.75
+      );
+      vignette.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+      vignette.addColorStop(0.65, 'rgba(215, 195, 165, 0.08)');
+      vignette.addColorStop(1, 'rgba(175, 145, 110, 0.22)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, sheetW, sheetH);
+
+      // Tactile cloth & paper fiber cross-weave pattern
+      ctx.fillStyle = 'rgba(145, 115, 80, 0.055)';
+      const weaveStep = 14;
+      for (let y = 10; y < sheetH - 10; y += weaveStep) {
+        ctx.fillRect(10, y, sheetW - 20, 0.8);
+      }
+      for (let x = 10; x < sheetW - 10; x += weaveStep) {
+        ctx.fillRect(x, 10, 0.8, sheetH - 20);
+      }
+
+      // Organic natural paper pulp grain flecks
+      ctx.fillStyle = 'rgba(135, 105, 70, 0.09)';
+      for (let x = 20; x < sheetW - 20; x += 32) {
+        for (let y = 20; y < sheetH - 20; y += 32) {
+          const ox = ((x * 19 + y * 29) % 23) - 11;
+          const oy = ((x * 23 + y * 13) % 23) - 11;
+          ctx.fillRect(x + ox, y + oy, 2, 1.4);
+        }
+      }
+
+      // Embossed crimped napkin borders (waffle pattern)
+      const crimp1 = 18;
+      const crimp2 = 28;
+      const dotSpacing = 12;
+      ctx.fillStyle = 'rgba(150, 120, 85, 0.28)';
+      for (let x = crimp1; x < sheetW - crimp1; x += dotSpacing) {
+        ctx.fillRect(x, crimp1, 2.5, 2.5);
+        ctx.fillRect(x + 6, crimp2, 2.5, 2.5);
+        ctx.fillRect(x, sheetH - crimp1 - 2.5, 2.5, 2.5);
+        ctx.fillRect(x + 6, sheetH - crimp2 - 2.5, 2.5, 2.5);
+      }
+      for (let y = crimp1; y < sheetH - crimp1; y += dotSpacing) {
+        ctx.fillRect(crimp1, y, 2.5, 2.5);
+        ctx.fillRect(crimp2, y + 6, 2.5, 2.5);
+        ctx.fillRect(sheetW - crimp1 - 2.5, y, 2.5, 2.5);
+        ctx.fillRect(sheetW - crimp2 - 2.5, y + 6, 2.5, 2.5);
+      }
+
+      // Outer embossed pressed edge grooves
+      ctx.strokeStyle = 'rgba(155, 125, 90, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(14, 14, sheetW - 28, sheetH - 28);
+
+      // Inner embossed stitch line with light bevel
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(15, 15, sheetW - 30, sheetH - 30);
+
+      ctx.strokeStyle = 'rgba(150, 120, 85, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+      ctx.strokeRect(34, 34, sheetW - 68, sheetH - 68);
+      ctx.setLineDash([]);
+
+      // Folded paper creases (center vertical & horizontal quarter-folds)
+      const midX = sheetW / 2;
+      const midY = sheetH / 2;
+
+      ctx.strokeStyle = 'rgba(130, 100, 65, 0.12)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(midX, 14);
+      ctx.lineTo(midX, sheetH - 14);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(midX + 2, 14);
+      ctx.lineTo(midX + 2, sheetH - 14);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(130, 100, 65, 0.12)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(14, midY);
+      ctx.lineTo(sheetW - 14, midY);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(14, midY + 2);
+      ctx.lineTo(sheetW - 14, midY + 2);
+      ctx.stroke();
+
+      // Faint authentic cafe coffee ring watermark in top right
+      const coffeeX = sheetW - 120;
+      const coffeeY = 110;
+      const coffeeR = 46;
+      ctx.strokeStyle = 'rgba(145, 95, 45, 0.08)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(coffeeX, coffeeY, coffeeR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(135, 80, 30, 0.05)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(coffeeX + 2, coffeeY + 1, coffeeR - 3, 0.5, Math.PI * 1.8);
+      ctx.stroke();
+
+      // Napkin watermark in bottom right
+      ctx.fillStyle = 'rgba(140, 110, 80, 0.5)';
+      ctx.font = "italic 14px 'Patrick Hand', cursive";
+      ctx.textAlign = 'right';
+      ctx.fillText('☕ The Back of the Napkin • Dan Roam Academy', sheetW - 42, sheetH - 38);
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+    return;
+  }
+
+  // Fallback / Export mode: full bleed across width and height
   if (texture === 'blueprint') {
     ctx.fillStyle = '#0a1628';
     ctx.fillRect(0, 0, width, height);
 
-    // Grid lines for blueprint
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
     ctx.lineWidth = 1;
     const step = 28;
@@ -40,7 +458,6 @@ export function renderBackground(
     }
     ctx.stroke();
 
-    // Major grid lines
     ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -54,11 +471,9 @@ export function renderBackground(
     }
     ctx.stroke();
   } else if (texture === 'kraft') {
-    // Warm cafe kraft paper
     ctx.fillStyle = '#eddcc4';
     ctx.fillRect(0, 0, width, height);
 
-    // Kraft paper fiber flecks
     ctx.fillStyle = 'rgba(140, 95, 55, 0.12)';
     const dotStep = 24;
     for (let x = dotStep / 2; x < width; x += dotStep) {
@@ -67,7 +482,6 @@ export function renderBackground(
       }
     }
 
-    // Outer cafe kraft embossed border
     ctx.strokeStyle = 'rgba(150, 105, 65, 0.25)';
     ctx.lineWidth = 3;
     ctx.strokeRect(18, 18, width - 36, height - 36);
@@ -80,7 +494,6 @@ export function renderBackground(
     ctx.fillStyle = '#f9fafb';
     ctx.fillRect(0, 0, width, height);
 
-    // Fine grid
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
     ctx.lineWidth = 1;
     const step = 20;
@@ -95,7 +508,6 @@ export function renderBackground(
     }
     ctx.stroke();
 
-    // Major grid
     ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -112,8 +524,6 @@ export function renderBackground(
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
   } else {
-    // 'napkin' - Authentic Dan Roam Back of the Napkin
-    // Warm, organic cafe parchment gradient with authentic paper tone
     const napkinGrad = ctx.createLinearGradient(0, 0, width, height);
     napkinGrad.addColorStop(0, '#fcf8ee');
     napkinGrad.addColorStop(0.35, '#f7f0df');
@@ -122,7 +532,6 @@ export function renderBackground(
     ctx.fillStyle = napkinGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Subtle radial table vignette (soft natural lighting)
     const vignette = ctx.createRadialGradient(
       width / 2, height / 2, Math.min(width, height) * 0.3,
       width / 2, height / 2, Math.max(width, height) * 0.75
@@ -133,7 +542,6 @@ export function renderBackground(
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
-    // Tactile cloth & paper fiber cross-weave pattern
     ctx.fillStyle = 'rgba(145, 115, 80, 0.055)';
     const weaveStep = 14;
     for (let y = 10; y < height - 10; y += weaveStep) {
@@ -143,7 +551,6 @@ export function renderBackground(
       ctx.fillRect(x, 10, 0.8, height - 20);
     }
 
-    // Organic natural paper pulp grain flecks
     ctx.fillStyle = 'rgba(135, 105, 70, 0.09)';
     for (let x = 20; x < width - 20; x += 32) {
       for (let y = 20; y < height - 20; y += 32) {
@@ -153,7 +560,6 @@ export function renderBackground(
       }
     }
 
-    // Embossed crimped napkin borders (characteristic waffle/scallop pattern on dinner napkins)
     const crimp1 = 18;
     const crimp2 = 28;
     const dotSpacing = 12;
@@ -171,12 +577,10 @@ export function renderBackground(
       ctx.fillRect(width - crimp2 - 2.5, y + 6, 2.5, 2.5);
     }
 
-    // Outer embossed pressed edge grooves
     ctx.strokeStyle = 'rgba(155, 125, 90, 0.4)';
     ctx.lineWidth = 2;
     ctx.strokeRect(14, 14, width - 28, height - 28);
 
-    // Inner embossed stitch line with light bevel
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(15, 15, width - 30, height - 30);
@@ -187,11 +591,9 @@ export function renderBackground(
     ctx.strokeRect(34, 34, width - 68, height - 68);
     ctx.setLineDash([]);
 
-    // Realistic folded paper creases (center vertical & horizontal quarter-folds)
     const midX = width / 2;
     const midY = height / 2;
 
-    // Vertical quarter-fold crease
     ctx.strokeStyle = 'rgba(130, 100, 65, 0.12)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -206,7 +608,6 @@ export function renderBackground(
     ctx.lineTo(midX + 2, height - 14);
     ctx.stroke();
 
-    // Horizontal quarter-fold crease
     ctx.strokeStyle = 'rgba(130, 100, 65, 0.12)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -221,7 +622,6 @@ export function renderBackground(
     ctx.lineTo(width - 14, midY + 2);
     ctx.stroke();
 
-    // Faint authentic cafe coffee ring watermark in top right
     const coffeeX = width - 120;
     const coffeeY = 110;
     const coffeeR = 46;
@@ -237,7 +637,6 @@ export function renderBackground(
     ctx.arc(coffeeX + 2, coffeeY + 1, coffeeR - 3, 0.5, Math.PI * 1.8);
     ctx.stroke();
 
-    // Napkin watermark in bottom right
     ctx.fillStyle = 'rgba(140, 110, 80, 0.5)';
     ctx.font = "italic 14px 'Patrick Hand', cursive";
     ctx.textAlign = 'right';
@@ -248,12 +647,178 @@ export function renderBackground(
 }
 
 /**
+ * Render a pressure-sensitive, variable-width freehand stroke
+ * Produces organic napkin felt-pen and marker ink with smooth quadratic contours and round endcaps
+ */
+export function renderPressureStroke(
+  ctx: CanvasRenderingContext2D,
+  pts: { x: number; y: number; pressure?: number }[],
+  color: string,
+  baseWidth: number,
+  isHighlighter: boolean = false
+) {
+  if (pts.length === 0) return;
+
+  if (pts.length === 1) {
+    const p = pts[0];
+    const pr = p.pressure !== undefined ? p.pressure : 0.5;
+    const factor = isHighlighter ? (0.7 + 0.6 * pr) : (0.35 + 1.3 * pr);
+    const r = Math.max(1, (baseWidth * factor) / 2);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    return;
+  }
+
+  // 1. Calculate per-point radius based on pressure and natural stroke entry/exit tapering
+  const count = pts.length;
+  const rawRadii: number[] = new Array(count);
+
+  for (let i = 0; i < count; i++) {
+    const pr = pts[i].pressure !== undefined ? pts[i].pressure! : 0.5;
+    // Felt pen: dynamic range from 35% to 165% of base width
+    // Highlighter: broad chisel, 75% to 150%
+    const factor = isHighlighter
+      ? (Math.max(16, baseWidth * 4) * (0.75 + 0.5 * pr)) / (baseWidth * 2)
+      : (0.35 + 1.3 * pr);
+
+    let r = Math.max(0.75, (baseWidth * factor) / 2);
+
+    // Natural entry and lift-off tapering at stroke terminals
+    if (count > 3) {
+      if (i === 0) r = Math.max(0.75, r * 0.55);
+      else if (i === 1) r = Math.max(0.75, r * 0.8);
+      else if (i === count - 1) r = Math.max(0.75, r * 0.55);
+      else if (i === count - 2) r = Math.max(0.75, r * 0.8);
+    }
+
+    rawRadii[i] = r;
+  }
+
+  // 2. Smooth radii across neighboring points with 3-point Gaussian kernel to prevent sudden bumps
+  const radii: number[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    if (i === 0 || i === count - 1 || count <= 2) {
+      radii[i] = rawRadii[i];
+    } else {
+      radii[i] = rawRadii[i - 1] * 0.25 + rawRadii[i] * 0.5 + rawRadii[i + 1] * 0.25;
+    }
+  }
+
+  // 3. Compute continuous normal vectors along the spine
+  const leftPts: { x: number; y: number }[] = new Array(count);
+  const rightPts: { x: number; y: number }[] = new Array(count);
+
+  for (let i = 0; i < count; i++) {
+    let tanX = 0;
+    let tanY = 0;
+
+    if (i === 0) {
+      tanX = pts[1].x - pts[0].x;
+      tanY = pts[1].y - pts[0].y;
+    } else if (i === count - 1) {
+      tanX = pts[count - 1].x - pts[count - 2].x;
+      tanY = pts[count - 1].y - pts[count - 2].y;
+    } else {
+      tanX = pts[i + 1].x - pts[i - 1].x;
+      tanY = pts[i + 1].y - pts[i - 1].y;
+    }
+
+    const len = Math.hypot(tanX, tanY);
+    let nx = 0;
+    let ny = 1;
+    if (len > 0.0001) {
+      nx = -tanY / len;
+      ny = tanX / len;
+    }
+
+    const r = radii[i];
+    leftPts[i] = { x: pts[i].x + nx * r, y: pts[i].y + ny * r };
+    rightPts[i] = { x: pts[i].x - nx * r, y: pts[i].y - ny * r };
+  }
+
+  // 4. Build smooth outline polygon
+  ctx.beginPath();
+
+  // Round cap at start
+  const startP = pts[0];
+  const startR = radii[0];
+  const startAngle = Math.atan2(leftPts[0].y - startP.y, leftPts[0].x - startP.x);
+  const startEndAngle = Math.atan2(rightPts[0].y - startP.y, rightPts[0].x - startP.x);
+  ctx.arc(startP.x, startP.y, startR, startEndAngle, startAngle, false);
+
+  // Left curve spine forward
+  ctx.lineTo(leftPts[0].x, leftPts[0].y);
+  for (let i = 1; i < count; i++) {
+    const xc = (leftPts[i - 1].x + leftPts[i].x) / 2;
+    const yc = (leftPts[i - 1].y + leftPts[i].y) / 2;
+    ctx.quadraticCurveTo(leftPts[i - 1].x, leftPts[i - 1].y, xc, yc);
+  }
+  ctx.lineTo(leftPts[count - 1].x, leftPts[count - 1].y);
+
+  // Round cap at end
+  const endP = pts[count - 1];
+  const endR = radii[count - 1];
+  const endStartAngle = Math.atan2(leftPts[count - 1].y - endP.y, leftPts[count - 1].x - endP.x);
+  const endFinishAngle = Math.atan2(rightPts[count - 1].y - endP.y, rightPts[count - 1].x - endP.x);
+  ctx.arc(endP.x, endP.y, endR, endStartAngle, endFinishAngle, false);
+
+  // Right curve spine backward
+  ctx.lineTo(rightPts[count - 1].x, rightPts[count - 1].y);
+  for (let i = count - 2; i >= 0; i--) {
+    const xc = (rightPts[i + 1].x + rightPts[i].x) / 2;
+    const yc = (rightPts[i + 1].y + rightPts[i].y) / 2;
+    ctx.quadraticCurveTo(rightPts[i + 1].x, rightPts[i + 1].y, xc, yc);
+  }
+  ctx.lineTo(rightPts[0].x, rightPts[0].y);
+
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/**
  * Render freehand strokes (felt pen & highlighter)
  */
 export function renderStroke(ctx: CanvasRenderingContext2D, stroke: StrokeElement) {
   if (stroke.points.length === 0) return;
 
   ctx.save();
+  if (stroke.rotation && stroke.points.length > 0) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of stroke.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(stroke.rotation);
+    ctx.translate(-cx, -cy);
+  }
+
+  // Check if stroke contains dynamic stylus pressure modulation
+  const hasPressureDynamics =
+    stroke.hasPressure ||
+    (stroke.points.length > 1 &&
+      stroke.points.some((p) => p.pressure !== undefined && p.pressure > 0 && Math.abs(p.pressure - 0.5) > 0.03));
+
+  if (hasPressureDynamics) {
+    if (stroke.tool === 'highlighter') {
+      ctx.globalAlpha = 0.38;
+      ctx.globalCompositeOperation = 'multiply';
+      renderPressureStroke(ctx, stroke.points, stroke.color, stroke.width, true);
+    } else {
+      ctx.globalAlpha = 0.95;
+      renderPressureStroke(ctx, stroke.points, stroke.color, stroke.width, false);
+    }
+    ctx.restore();
+    return;
+  }
+
   if (stroke.tool === 'highlighter') {
     ctx.globalAlpha = 0.38;
     ctx.globalCompositeOperation = 'multiply';
@@ -393,6 +958,13 @@ export function renderConnector(
   conn: ConnectorElement
 ) {
   ctx.save();
+  if (conn.rotation) {
+    const cx = (conn.fromPoint.x + conn.toPoint.x) / 2;
+    const cy = (conn.fromPoint.y + conn.toPoint.y) / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(conn.rotation);
+    ctx.translate(-cx, -cy);
+  }
   const { fromPoint, toPoint, color, strokeWidth, label, arrowEnd, lineStyle, isRough } = conn;
   const roughOpts = {
     roughness: isRough ? 1.2 : 0,
@@ -491,6 +1063,14 @@ export function renderShape(
   shape: ShapeElement
 ) {
   ctx.save();
+  if (shape.rotation) {
+    const isLineLike = (shape.shapeType === 'arrow' || shape.shapeType === 'line') && shape.startPoint && shape.endPoint;
+    const cx = isLineLike ? (shape.startPoint!.x + shape.endPoint!.x) / 2 : shape.x + shape.width / 2;
+    const cy = isLineLike ? (shape.startPoint!.y + shape.endPoint!.y) / 2 : shape.y + shape.height / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(shape.rotation);
+    ctx.translate(-cx, -cy);
+  }
 
   const { x, y, width, height, color, fillColor, strokeWidth, isRough, shapeType, text, fontSize } = shape;
   const roughOpts = {
@@ -682,6 +1262,16 @@ export function renderShape(
  */
 export function renderText(ctx: CanvasRenderingContext2D, el: TextElement) {
   ctx.save();
+  if (el.rotation) {
+    const textLen = el.text ? el.text.length : 1;
+    const w = Math.max(60, el.fontSize * textLen * 0.65);
+    const h = el.fontSize * 1.5;
+    const cx = el.x + w / 2;
+    const cy = el.y + h / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(el.rotation);
+    ctx.translate(-cx, -cy);
+  }
   ctx.fillStyle = el.color;
   ctx.font = `600 ${el.fontSize}px '${el.fontFamily}', cursive, sans-serif`;
   ctx.textBaseline = 'top';
@@ -709,6 +1299,13 @@ export function renderModel(
   model: ModelElement
 ) {
   ctx.save();
+  if (model.rotation) {
+    const cx = model.x + model.width / 2;
+    const cy = model.y + model.height / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(model.rotation);
+    ctx.translate(-cx, -cy);
+  }
   const { x, y, width, height, modelKind, data, color, fillColor } = model;
   const roughOpts = {
     roughness: 1.5,
@@ -766,6 +1363,8 @@ export function renderModel(
         tagTextColor = '#9f1239';
       }
 
+      const noteScale = Math.max(0.4, Math.min(2.0, Math.min(width / 200, height / 200)));
+
       // Soft paper drop shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
       ctx.fillRect(x + 4, y + 4, width, height);
@@ -781,16 +1380,19 @@ export function renderModel(
       });
 
       // Bottom folded curl corner
+      const curlSize = Math.max(8, Math.min(22, Math.min(width, height) * 0.12));
       ctx.fillStyle = 'rgba(0, 0, 0, 0.07)';
       ctx.beginPath();
-      ctx.moveTo(x + width - 16, y + height);
-      ctx.lineTo(x + width, y + height - 16);
+      ctx.moveTo(x + width - curlSize, y + height);
+      ctx.lineTo(x + width, y + height - curlSize);
       ctx.lineTo(x + width, y + height);
       ctx.closePath();
       ctx.fill();
 
       // Top pushpin with highlight and shadow
-      rc.circle(x + width / 2, y + 10, 11, {
+      const pinY = y + Math.max(6, Math.min(14, 10 * noteScale));
+      const pinR = Math.max(4, Math.min(13, 11 * noteScale));
+      rc.circle(x + width / 2, pinY, pinR * 2, {
         fill: pinColor,
         fillStyle: 'solid',
         stroke: 'rgba(0, 0, 0, 0.3)',
@@ -799,40 +1401,45 @@ export function renderModel(
       // Specular pin highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.beginPath();
-      ctx.arc(x + width / 2 - 2, y + 8, 2.5, 0, Math.PI * 2);
+      ctx.arc(x + width / 2 - pinR * 0.2, pinY - pinR * 0.2, Math.max(1, pinR * 0.22), 0, Math.PI * 2);
       ctx.fill();
 
       // Tag Pill Badge
+      const badgeH = Math.max(14, Math.min(24, 20 * noteScale));
+      const badgeW = Math.max(40, Math.min(140 * noteScale, width - 28));
+      const badgeY = pinY + pinR / 2 + Math.max(4, 6 * noteScale);
       ctx.fillStyle = tagBg;
       ctx.beginPath();
-      const badgeW = Math.min(130, width - 36);
-      const badgeH = 20;
       if (ctx.roundRect) {
-        ctx.roundRect(x + 16, y + 26, badgeW, badgeH, 6);
+        ctx.roundRect(x + (width - badgeW) / 2, badgeY, badgeW, badgeH, 6);
       } else {
-        ctx.rect(x + 16, y + 26, badgeW, badgeH);
+        ctx.rect(x + (width - badgeW) / 2, badgeY, badgeW, badgeH);
       }
       ctx.fill();
 
+      const badgeFontSize = Math.max(8, Math.min(13, Math.round(badgeH * 0.6)));
       ctx.fillStyle = tagTextColor;
-      ctx.font = "bold 12px 'Outfit', sans-serif";
+      ctx.font = `bold ${badgeFontSize}px 'Outfit', sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(tagText, x + 16 + badgeW / 2, y + 40);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tagText, x + width / 2, badgeY + badgeH / 2);
 
       // Memo Content text with multi-line paragraph wrapping, auto-scaling, and bottom boundary protection
       ctx.fillStyle = '#0f172a';
-      const maxNoteWidth = width - 32;
-      const maxNoteHeight = height - 72;
+      const padSide = Math.max(8, Math.min(20, width * 0.08));
+      const maxNoteWidth = Math.max(30, width - padSide * 2);
+      const startTextY = badgeY + badgeH + Math.max(6, 10 * noteScale);
+      const maxNoteHeight = Math.max(20, (y + height - curlSize - 4) - startTextY);
 
-      let noteFontSize = 16;
+      let noteFontSize = Math.max(9, Math.min(24, Math.round(16 * noteScale)));
       let noteLines: string[] = [];
       let noteLineH = noteFontSize * 1.35;
 
-      while (noteFontSize >= 11) {
+      while (noteFontSize >= 9) {
         ctx.font = `${noteFontSize}px 'Kalam', 'Patrick Hand', cursive`;
         noteLines = wrapCanvasText(ctx, data.text || '', maxNoteWidth);
         noteLineH = noteFontSize * 1.35;
-        if (noteLines.length * noteLineH <= maxNoteHeight || noteFontSize <= 11) {
+        if (noteLines.length * noteLineH <= maxNoteHeight || noteFontSize <= 9) {
           break;
         }
         noteFontSize -= 1;
@@ -842,16 +1449,15 @@ export function renderModel(
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
 
-      let curY = y + 56;
-      const maxY = y + height - 16;
+      let curY = startTextY;
+      const maxY = y + height - Math.max(8, curlSize);
 
       for (let i = 0; i < noteLines.length; i++) {
         if (curY + noteLineH > maxY) {
-          // If content exceeds sticky height, render neat ellipsis and stop
-          ctx.fillText('...', x + 16, curY);
+          ctx.fillText('...', x + padSide, curY);
           break;
         }
-        ctx.fillText(noteLines[i], x + 16, curY);
+        ctx.fillText(noteLines[i], x + padSide, curY);
         curY += noteLineH;
       }
       break;
@@ -859,7 +1465,7 @@ export function renderModel(
 
     case 'matrix2x2': {
       // 2x2 Strategic Matrix
-      // Background outline box
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 520, height / 400)));
       rc.rectangle(x, y, width, height, {
         ...roughOpts,
         fill: '#ffffff',
@@ -872,52 +1478,66 @@ export function renderModel(
       const midY = y + height / 2;
 
       // X-axis line & Y-axis line
-      rc.line(x + 10, midY, x + width - 10, midY, { stroke: color, strokeWidth: 2.5, roughness: 1.2 });
-      rc.line(midX, y + 10, midX, y + height - 10, { stroke: color, strokeWidth: 2.5, roughness: 1.2 });
+      rc.line(x + 10, midY, x + width - 10, midY, {
+        stroke: color,
+        strokeWidth: Math.max(1.5, 2.5 * scale),
+        roughness: 1.2,
+      });
+      rc.line(midX, y + 10, midX, y + height - 10, {
+        stroke: color,
+        strokeWidth: Math.max(1.5, 2.5 * scale),
+        roughness: 1.2,
+      });
 
       // Quadrant labels
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
 
+      const titleSize = Math.max(10, Math.min(24, Math.round(18 * scale)));
+      const descSize = Math.max(8, Math.min(16, Math.round(14 * scale)));
+      const axisSize = Math.max(8, Math.min(15, Math.round(13 * scale)));
+      const topPad = Math.max(6, Math.min(24, height * 0.05));
+      const descPad = topPad + titleSize + Math.max(2, 4 * scale);
+
       // Q1: Top-Left (High Impact, Low Effort -> QUICK WINS)
-      ctx.fillStyle = '#16a34a'; // Green
-      ctx.font = "bold 18px 'Outfit', sans-serif";
-      ctx.fillText(data.q1?.title || 'QUICK WINS', x + width * 0.25, y + 16);
+      ctx.fillStyle = '#16a34a';
+      ctx.font = `bold ${titleSize}px 'Outfit', sans-serif`;
+      ctx.fillText(data.q1?.title || 'QUICK WINS', x + width * 0.25, y + topPad);
       ctx.fillStyle = '#475569';
-      ctx.font = "14px 'Patrick Hand', cursive";
-      ctx.fillText(data.q1?.desc || 'High Impact, Low Effort', x + width * 0.25, y + 42);
+      ctx.font = `${descSize}px 'Patrick Hand', cursive`;
+      ctx.fillText(data.q1?.desc || 'High Impact, Low Effort', x + width * 0.25, y + descPad);
 
       // Q2: Top-Right (High Impact, High Effort -> STRATEGIC BETS)
-      ctx.fillStyle = '#2563eb'; // Blue
-      ctx.font = "bold 18px 'Outfit', sans-serif";
-      ctx.fillText(data.q2?.title || 'STRATEGIC BETS', x + width * 0.75, y + 16);
+      ctx.fillStyle = '#2563eb';
+      ctx.font = `bold ${titleSize}px 'Outfit', sans-serif`;
+      ctx.fillText(data.q2?.title || 'STRATEGIC BETS', x + width * 0.75, y + topPad);
       ctx.fillStyle = '#475569';
-      ctx.font = "14px 'Patrick Hand', cursive";
-      ctx.fillText(data.q2?.desc || 'Plan & Resource Well', x + width * 0.75, y + 42);
+      ctx.font = `${descSize}px 'Patrick Hand', cursive`;
+      ctx.fillText(data.q2?.desc || 'Plan & Resource Well', x + width * 0.75, y + descPad);
 
       // Q3: Bottom-Left (Low Impact, Low Effort -> FILL-INS)
-      ctx.fillStyle = '#d97706'; // Amber
-      ctx.font = "bold 18px 'Outfit', sans-serif";
-      ctx.fillText(data.q3?.title || 'FILL-INS', x + width * 0.25, midY + 16);
+      ctx.fillStyle = '#d97706';
+      ctx.font = `bold ${titleSize}px 'Outfit', sans-serif`;
+      ctx.fillText(data.q3?.title || 'FILL-INS', x + width * 0.25, midY + topPad);
       ctx.fillStyle = '#475569';
-      ctx.font = "14px 'Patrick Hand', cursive";
-      ctx.fillText(data.q3?.desc || 'Low Impact, Low Effort', x + width * 0.25, midY + 42);
+      ctx.font = `${descSize}px 'Patrick Hand', cursive`;
+      ctx.fillText(data.q3?.desc || 'Low Impact, Low Effort', x + width * 0.25, midY + descPad);
 
       // Q4: Bottom-Right (Low Impact, High Effort -> TIME SINKS)
-      ctx.fillStyle = '#dc2626'; // Red
-      ctx.font = "bold 18px 'Outfit', sans-serif";
-      ctx.fillText(data.q4?.title || 'TIME SINKS', x + width * 0.75, midY + 16);
+      ctx.fillStyle = '#dc2626';
+      ctx.font = `bold ${titleSize}px 'Outfit', sans-serif`;
+      ctx.fillText(data.q4?.title || 'TIME SINKS', x + width * 0.75, midY + topPad);
       ctx.fillStyle = '#475569';
-      ctx.font = "14px 'Patrick Hand', cursive";
-      ctx.fillText(data.q4?.desc || 'Deprioritize / Avoid', x + width * 0.75, midY + 42);
+      ctx.font = `${descSize}px 'Patrick Hand', cursive`;
+      ctx.fillText(data.q4?.desc || 'Deprioritize / Avoid', x + width * 0.75, midY + descPad);
 
       // Axis Titles
       ctx.fillStyle = '#0f172a';
-      ctx.font = "bold 13px 'Outfit', sans-serif";
-      ctx.fillText(data.xAxis || 'EFFORT / COST →', x + width / 2, y + height - 20);
+      ctx.font = `bold ${axisSize}px 'Outfit', sans-serif`;
+      ctx.fillText(data.xAxis || 'EFFORT / COST →', x + width / 2, y + height - Math.max(12, 20 * scale));
 
       ctx.save();
-      ctx.translate(x + 16, y + height / 2);
+      ctx.translate(x + Math.max(10, 16 * scale), midY);
       ctx.rotate(-Math.PI / 2);
       ctx.fillText(data.yAxis || 'VALUE / IMPACT →', 0, 0);
       ctx.restore();
@@ -926,7 +1546,7 @@ export function renderModel(
 
     case 'barchart': {
       // Native Hand-drawn Bar Chart
-      // Draw background card
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 480, height / 300)));
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -935,55 +1555,75 @@ export function renderModel(
         roughness: 1.2,
       });
 
-      // Axes
-      const originX = x + 60;
-      const originY = y + height - 55;
-      const chartW = width - 90;
-      const chartH = height - 95;
+      // Responsive Margins & Origin
+      const marginLeft = Math.max(30, Math.min(70, width * 0.13));
+      const marginRight = Math.max(16, Math.min(40, width * 0.06));
+      const marginTop = Math.max(22, Math.min(50, height * 0.14));
+      const marginBottom = Math.max(26, Math.min(60, height * 0.18));
 
-      rc.line(originX, y + 25, originX, originY, { stroke: color, strokeWidth: 2.5, roughness: 1.2 });
-      rc.line(originX, originY, originX + chartW, originY, { stroke: color, strokeWidth: 2.5, roughness: 1.2 });
+      const originX = x + marginLeft;
+      const originY = y + height - marginBottom;
+      const chartW = Math.max(30, width - marginLeft - marginRight);
+      const chartH = Math.max(25, height - marginTop - marginBottom);
+
+      rc.line(originX, y + Math.max(12, marginTop * 0.6), originX, originY, {
+        stroke: color,
+        strokeWidth: Math.max(1.5, 2.5 * scale),
+        roughness: 1.2,
+      });
+      rc.line(originX, originY, originX + chartW, originY, {
+        stroke: color,
+        strokeWidth: Math.max(1.5, 2.5 * scale),
+        roughness: 1.2,
+      });
 
       // Title / Y Label
+      const titleFont = Math.max(9, Math.min(16, Math.round(13 * scale)));
       ctx.fillStyle = '#334155';
-      ctx.font = "bold 13px 'Outfit', sans-serif";
+      ctx.font = `bold ${titleFont}px 'Outfit', sans-serif`;
       ctx.textAlign = 'left';
-      ctx.fillText(data.yLabel || 'Growth / Impact', originX, y + 16);
+      ctx.textBaseline = 'top';
+      ctx.fillText(data.yLabel || 'Growth / Impact', originX, y + Math.max(6, marginTop * 0.35));
 
       const bars: { label: string; value: number; color: string }[] = data.bars || [];
       const barSpacing = chartW / (bars.length || 1);
-      const barWidth = Math.min(50, barSpacing * 0.6);
+      const barWidth = Math.max(8, Math.min(55 * scale, barSpacing * 0.65));
+      const valFontSize = Math.max(8, Math.min(16, Math.round(14 * scale)));
+      const lblFontSize = Math.max(8, Math.min(14, Math.round(13 * scale)));
 
       bars.forEach((b, idx) => {
         const bx = originX + idx * barSpacing + (barSpacing - barWidth) / 2;
-        const bHeight = (b.value / 100) * chartH;
+        const bHeight = Math.max(4, (b.value / 100) * chartH);
         const by = originY - bHeight;
 
         rc.rectangle(bx, by, barWidth, bHeight, {
           stroke: color,
-          strokeWidth: 2,
+          strokeWidth: Math.max(1.2, 2 * scale),
           fill: b.color || '#2563eb',
           fillStyle: 'hachure',
-          hachureGap: 5,
+          hachureGap: Math.max(3, 5 * scale),
           roughness: 1.5,
         });
 
         // Value on top
         ctx.fillStyle = '#0f172a';
-        ctx.font = "bold 14px 'Patrick Hand', cursive";
+        ctx.font = `bold ${valFontSize}px 'Patrick Hand', cursive`;
         ctx.textAlign = 'center';
-        ctx.fillText(`${b.value}`, bx + barWidth / 2, by - 16);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`${b.value}`, bx + barWidth / 2, Math.max(y + 4, by - 2));
 
         // Label below axis
-        ctx.font = "13px 'Patrick Hand', cursive";
+        ctx.font = `${lblFontSize}px 'Patrick Hand', cursive`;
         ctx.fillStyle = '#475569';
-        ctx.fillText(b.label, bx + barWidth / 2, originY + 18);
+        ctx.textBaseline = 'top';
+        ctx.fillText(b.label, bx + barWidth / 2, originY + Math.max(4, 6 * scale));
       });
       break;
     }
 
     case 'piechart': {
       // Donut / Pie Chart
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 380, height / 300)));
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -992,29 +1632,36 @@ export function renderModel(
         roughness: 1.2,
       });
 
+      const titleSize = Math.max(10, Math.min(20, Math.round(16 * scale)));
       ctx.fillStyle = '#1e293b';
-      ctx.font = "bold 16px 'Outfit', sans-serif";
+      ctx.font = `bold ${titleSize}px 'Outfit', sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(data.title || 'Proportion Breakdown', x + width / 2, y + 24);
+      ctx.textBaseline = 'top';
+      ctx.fillText(data.title || 'Proportion Breakdown', x + width / 2, y + Math.max(8, 16 * scale));
 
-      const cx = x + width * 0.38;
-      const cy = y + height * 0.58;
-      const radius = Math.min(width, height) * 0.32;
+      const topOffset = Math.max(22, titleSize + 16 * scale);
+      const availH = height - topOffset;
+      const cx = x + width * 0.36;
+      const cy = y + topOffset + availH * 0.48;
+      const radius = Math.max(15, Math.min(width * 0.28, availH * 0.4));
 
       // Sketchy outer ring
       rc.circle(cx, cy, radius * 2, {
         stroke: color,
-        strokeWidth: 2.2,
+        strokeWidth: Math.max(1.5, 2.2 * scale),
         roughness: 1.4,
       });
 
       // Draw Legend on right
       const slices = data.slices || [];
-      const legX = x + width * 0.68;
-      let legY = y + 70;
+      const legX = x + width * 0.64;
+      const itemH = Math.max(16, Math.min(36, (availH - 12) / (slices.length || 1)));
+      let legY = y + topOffset + (availH - itemH * slices.length) / 2;
+      const boxSize = Math.max(8, Math.min(18, Math.round(15 * scale)));
+      const fontS = Math.max(8, Math.min(15, Math.round(13 * scale)));
 
       slices.forEach((s: any) => {
-        rc.rectangle(legX, legY, 16, 16, {
+        rc.rectangle(legX, legY, boxSize, boxSize, {
           fill: s.color,
           fillStyle: 'solid',
           stroke: color,
@@ -1022,16 +1669,18 @@ export function renderModel(
           roughness: 1,
         });
         ctx.textAlign = 'left';
-        ctx.font = "14px 'Patrick Hand', cursive";
+        ctx.textBaseline = 'middle';
+        ctx.font = `${fontS}px 'Patrick Hand', cursive`;
         ctx.fillStyle = '#1e293b';
-        ctx.fillText(`${s.label} (${s.percent}%)`, legX + 24, legY + 13);
-        legY += 34;
+        ctx.fillText(`${s.label} (${s.percent}%)`, legX + boxSize + Math.max(4, 8 * scale), legY + boxSize / 2);
+        legY += itemH;
       });
       break;
     }
 
     case 'timeline': {
       // Milestone Timeline (When - Distinct Phased Steps)
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 620, height / 240)));
       rc.rectangle(x, y, width, height, {
         stroke: '#cbd5e1',
         strokeWidth: 1.5,
@@ -1041,23 +1690,25 @@ export function renderModel(
       });
 
       const milestones = data.milestones || [];
-      const lineY = y + height * 0.46;
-      const startX = x + 45;
-      const endX = x + width - 45;
+      const lineY = y + height * 0.44;
+      const padX = Math.max(20, Math.min(60, width * 0.08));
+      const startX = x + padX;
+      const endX = x + width - padX;
 
       // Connecting flow line
       rc.line(startX, lineY, endX, lineY, {
         stroke: '#94a3b8',
-        strokeWidth: 3,
+        strokeWidth: Math.max(1.8, 3 * scale),
         roughness: 1.2,
       });
+
       // End arrow
-      rc.line(endX, lineY, endX - 14, lineY - 8, { stroke: '#64748b', strokeWidth: 2.5 });
-      rc.line(endX, lineY, endX - 14, lineY + 8, { stroke: '#64748b', strokeWidth: 2.5 });
+      const arrowSize = Math.max(6, 12 * scale);
+      rc.line(endX, lineY, endX - arrowSize, lineY - arrowSize * 0.6, { stroke: '#64748b', strokeWidth: 2 });
+      rc.line(endX, lineY, endX - arrowSize, lineY + arrowSize * 0.6, { stroke: '#64748b', strokeWidth: 2 });
 
-      const spacing = (endX - startX - 20) / (milestones.length || 1);
+      const spacing = (endX - startX - arrowSize) / (milestones.length || 1);
 
-      // Distinct phase color palettes per step so every step has a unique identity
       const PHASE_PALETTES = [
         { stroke: '#4f46e5', fill: '#6366f1', glow: 'rgba(99, 102, 241, 0.16)', tagBg: '#eef2ff', tagText: '#4338ca', phase: 'Phase 1' },
         { stroke: '#0284c7', fill: '#0ea5e9', glow: 'rgba(14, 165, 233, 0.16)', tagBg: '#e0f2fe', tagText: '#0369a1', phase: 'Phase 2' },
@@ -1066,21 +1717,31 @@ export function renderModel(
         { stroke: '#7c3aed', fill: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.16)', tagBg: '#faf5ff', tagText: '#6d28d9', phase: 'Phase 5' },
       ];
 
+      const nodeR = Math.max(10, Math.min(22, 17 * scale));
+      const glowR = nodeR * 1.35;
+      const badgeW = Math.max(36, Math.min(75, 62 * scale));
+      const badgeH = Math.max(12, Math.min(20, 18 * scale));
+      const badgeFont = Math.max(7, Math.min(11, Math.round(10 * scale)));
+      const timeFont = Math.max(7, Math.min(13, Math.round(12 * scale)));
+      const stepFont = Math.max(8, Math.min(16, Math.round(14 * scale)));
+      const titleFont = Math.max(8, Math.min(17, Math.round(15 * scale)));
+      const descFont = Math.max(7, Math.min(13, Math.round(12 * scale)));
+
       milestones.forEach((m: any, idx: number) => {
         const mx = startX + idx * spacing + spacing / 2;
         const pal = PHASE_PALETTES[idx % PHASE_PALETTES.length];
 
         // Soft glow ring
-        rc.circle(mx, lineY, 44, {
+        rc.circle(mx, lineY, glowR * 2, {
           stroke: 'transparent',
           fill: pal.glow,
           fillStyle: 'solid',
         });
 
-        // Milestone Node circle with distinctive phase coloring
-        rc.circle(mx, lineY, 34, {
+        // Milestone Node circle
+        rc.circle(mx, lineY, nodeR * 2, {
           stroke: pal.stroke,
-          strokeWidth: 2.5,
+          strokeWidth: Math.max(1.5, 2.5 * scale),
           fill: pal.fill,
           fillStyle: 'solid',
           roughness: 1.3,
@@ -1088,47 +1749,55 @@ export function renderModel(
 
         // Step number inside circle
         ctx.fillStyle = '#ffffff';
-        ctx.font = "bold 15px 'Outfit', sans-serif";
+        ctx.font = `bold ${stepFont}px 'Outfit', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`${m.step || idx + 1}`, mx, lineY);
 
         // Phase pill badge above
         const phaseLabel = m.phase || pal.phase;
+        const badgeY = lineY - nodeR - badgeH - Math.max(14, 22 * scale);
         ctx.fillStyle = pal.tagBg;
         ctx.beginPath();
-        const badgeW = 62;
-        const badgeH = 18;
         if (ctx.roundRect) {
-          ctx.roundRect(mx - badgeW / 2, lineY - 50, badgeW, badgeH, 8);
+          ctx.roundRect(mx - badgeW / 2, badgeY, badgeW, badgeH, 6);
         } else {
-          ctx.rect(mx - badgeW / 2, lineY - 50, badgeW, badgeH);
+          ctx.rect(mx - badgeW / 2, badgeY, badgeW, badgeH);
         }
         ctx.fill();
 
         ctx.fillStyle = pal.tagText;
-        ctx.font = "bold 10px 'Outfit', sans-serif";
-        ctx.fillText(phaseLabel, mx, lineY - 41);
+        ctx.font = `bold ${badgeFont}px 'Outfit', sans-serif`;
+        ctx.textBaseline = 'middle';
+        ctx.fillText(phaseLabel, mx, badgeY + badgeH / 2);
 
         // Date/Time pill
+        const timeY = lineY - nodeR - Math.max(4, 8 * scale);
         ctx.fillStyle = '#475569';
-        ctx.font = "bold 12px 'Outfit', sans-serif";
-        ctx.fillText(m.time || '', mx, lineY - 24);
+        ctx.font = `bold ${timeFont}px 'Outfit', sans-serif`;
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(m.time || '', mx, timeY);
 
         // Title & Desc below
+        const titleY = lineY + nodeR + Math.max(4, 10 * scale);
         ctx.fillStyle = '#0f172a';
-        ctx.font = "bold 16px 'Patrick Hand', cursive";
-        ctx.fillText(m.title || '', mx, lineY + 34);
+        ctx.font = `bold ${titleFont}px 'Patrick Hand', cursive`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(m.title || '', mx, titleY);
 
-        ctx.fillStyle = '#64748b';
-        ctx.font = "12px 'Patrick Hand', cursive";
-        ctx.fillText(m.desc || '', mx, lineY + 54);
+        const descY = titleY + titleFont + Math.max(2, 4 * scale);
+        if (descY + descFont <= y + height - 4) {
+          ctx.fillStyle = '#64748b';
+          ctx.font = `${descFont}px 'Patrick Hand', cursive`;
+          ctx.fillText(m.desc || '', mx, descY);
+        }
       });
       break;
     }
 
     case 'flowchart': {
       // Step-by-step Flowchart (Distinct Steps & Badges)
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 620, height / 280)));
       rc.rectangle(x, y, width, height, {
         stroke: '#cbd5e1',
         strokeWidth: 1.5,
@@ -1138,12 +1807,12 @@ export function renderModel(
       });
 
       const nodes = data.nodes || [];
-      const nodeW = Math.min(125, (width - 40) / (nodes.length || 1) - 22);
-      const nodeH = 70;
+      const totalPad = Math.max(16, Math.min(45, width * 0.06));
+      const stepDist = (width - totalPad * 2) / (nodes.length || 1);
+      const nodeH = Math.max(34, Math.min(85, height * 0.36));
+      const nodeW = Math.max(40, Math.min(145, stepDist * 0.76));
       const centerY = y + height / 2;
-      const stepDist = (width - 60) / (nodes.length || 1);
 
-      // Distinct themes per step position / type so steps never look identical
       const STEP_PALETTES = [
         { stroke: '#059669', fill: '#ecfdf5', badgeBg: '#10b981', badgeText: '#ffffff', defaultBadge: 'STEP 1 • INPUT', text: '#064e3b' },
         { stroke: '#2563eb', fill: '#eff6ff', badgeBg: '#3b82f6', badgeText: '#ffffff', defaultBadge: 'STEP 2 • ACTION', text: '#1e3a8a' },
@@ -1151,13 +1820,18 @@ export function renderModel(
         { stroke: '#7c3aed', fill: '#f5f3ff', badgeBg: '#8b5cf6', badgeText: '#ffffff', defaultBadge: 'STEP 4 • GOAL', text: '#4c1d95' },
       ];
 
+      const badgeFont = Math.max(7, Math.min(11, Math.round(9 * scale)));
+      const labelFont = Math.max(8, Math.min(15, Math.round(13 * scale)));
+      const badgeH = Math.max(12, Math.min(18, 16 * scale));
+      const badgeW = Math.min(nodeW - 6, Math.max(30, 80 * scale));
+
       nodes.forEach((n: any, idx: number) => {
-        const nx = x + 35 + idx * stepDist;
+        const nx = x + totalPad + idx * stepDist + (stepDist - nodeW) / 2;
         const ny = centerY - nodeH / 2;
         const pal = STEP_PALETTES[idx % STEP_PALETTES.length];
 
         if (n.type === 'decision') {
-          // Diamond shape with warm amber check styling
+          // Diamond shape
           const cx = nx + nodeW / 2;
           const cy = centerY;
           rc.polygon(
@@ -1167,46 +1841,42 @@ export function renderModel(
               [cx, cy + nodeH / 2],
               [cx - nodeW / 2, cy],
             ],
-            { stroke: '#d97706', strokeWidth: 2.4, fill: '#fef3c7', fillStyle: 'solid', roughness: 1.3 }
+            { stroke: '#d97706', strokeWidth: Math.max(1.5, 2.4 * scale), fill: '#fef3c7', fillStyle: 'solid', roughness: 1.3 }
           );
 
           // Decision Step Badge above diamond
           ctx.fillStyle = '#f59e0b';
           ctx.beginPath();
-          const bw = 66;
-          const bh = 17;
           if (ctx.roundRect) {
-            ctx.roundRect(cx - bw / 2, cy - nodeH / 2 - 12, bw, bh, 8);
+            ctx.roundRect(cx - badgeW / 2, cy - nodeH / 2 - badgeH * 0.7, badgeW, badgeH, 6);
           } else {
-            ctx.rect(cx - bw / 2, cy - nodeH / 2 - 12, bw, bh);
+            ctx.rect(cx - badgeW / 2, cy - nodeH / 2 - badgeH * 0.7, badgeW, badgeH);
           }
           ctx.fill();
 
           ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 9px 'Outfit', sans-serif";
+          ctx.font = `bold ${badgeFont}px 'Outfit', sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(`DECISION ?`, cx, cy - nodeH / 2 - 3);
+          ctx.fillText(`DECISION ?`, cx, cy - nodeH / 2 - badgeH * 0.2);
 
           // Decision text inside
           ctx.fillStyle = '#78350f';
-          ctx.font = "bold 13px 'Patrick Hand', cursive";
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.font = `bold ${labelFont}px 'Patrick Hand', cursive`;
           ctx.fillText(n.label, cx, cy);
         } else {
-          // Process box with distinctive step color & theme
+          // Process box
           const isStart = n.type === 'start' || idx === 0;
           const isEnd = n.type === 'end' || idx === nodes.length - 1;
           const strokeCol = isStart ? '#059669' : isEnd ? '#7c3aed' : pal.stroke;
           const fillCol = isStart ? '#ecfdf5' : isEnd ? '#f5f3ff' : pal.fill;
           const badgeBg = isStart ? '#10b981' : isEnd ? '#8b5cf6' : pal.badgeBg;
-          const badgeText = isStart ? 'START • STEP 1' : isEnd ? 'GOAL • DONE' : `STEP ${idx + 1}`;
+          const badgeText = isStart ? 'START • 1' : isEnd ? 'GOAL • DONE' : `STEP ${idx + 1}`;
           const textCol = isStart ? '#064e3b' : isEnd ? '#4c1d95' : pal.text;
 
           rc.rectangle(nx, ny, nodeW, nodeH, {
             stroke: strokeCol,
-            strokeWidth: 2.2,
+            strokeWidth: Math.max(1.5, 2.2 * scale),
             fill: fillCol,
             fillStyle: 'solid',
             roughness: 1.3,
@@ -1215,38 +1885,35 @@ export function renderModel(
           // Step badge pill at top of box
           ctx.fillStyle = badgeBg;
           ctx.beginPath();
-          const bw = Math.min(88, nodeW - 12);
-          const bh = 16;
           if (ctx.roundRect) {
-            ctx.roundRect(nx + (nodeW - bw) / 2, ny - 9, bw, bh, 8);
+            ctx.roundRect(nx + (nodeW - badgeW) / 2, ny - badgeH / 2, badgeW, badgeH, 6);
           } else {
-            ctx.rect(nx + (nodeW - bw) / 2, ny - 9, bw, bh);
+            ctx.rect(nx + (nodeW - badgeW) / 2, ny - badgeH / 2, badgeW, badgeH);
           }
           ctx.fill();
 
           ctx.fillStyle = '#ffffff';
-          ctx.font = "bold 9px 'Outfit', sans-serif";
+          ctx.font = `bold ${badgeFont}px 'Outfit', sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(badgeText, nx + nodeW / 2, ny - 1);
+          ctx.fillText(badgeText, nx + nodeW / 2, ny);
 
           // Node content label
           ctx.fillStyle = textCol;
-          ctx.font = "bold 13px 'Patrick Hand', cursive";
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(n.label, nx + nodeW / 2, centerY + 4);
+          ctx.font = `bold ${labelFont}px 'Patrick Hand', cursive`;
+          ctx.fillText(n.label, nx + nodeW / 2, centerY + Math.max(2, 4 * scale));
         }
 
         // Connecting arrow to next node
         if (idx < nodes.length - 1) {
-          const nextNx = x + 35 + (idx + 1) * stepDist;
-          const arrowStartX = nx + nodeW + 4;
-          const arrowEndX = nextNx - 4;
+          const nextNx = x + totalPad + (idx + 1) * stepDist + (stepDist - nodeW) / 2;
+          const arrowStartX = nx + nodeW + 2;
+          const arrowEndX = nextNx - 2;
           const arrowColor = pal.stroke;
-          rc.line(arrowStartX, centerY, arrowEndX, centerY, { stroke: arrowColor, strokeWidth: 2.2, roughness: 1.2 });
-          rc.line(arrowEndX, centerY, arrowEndX - 8, centerY - 5, { stroke: arrowColor, strokeWidth: 2.2 });
-          rc.line(arrowEndX, centerY, arrowEndX - 8, centerY + 5, { stroke: arrowColor, strokeWidth: 2.2 });
+          rc.line(arrowStartX, centerY, arrowEndX, centerY, { stroke: arrowColor, strokeWidth: Math.max(1.5, 2.2 * scale), roughness: 1.2 });
+          const aSize = Math.max(5, 7 * scale);
+          rc.line(arrowEndX, centerY, arrowEndX - aSize, centerY - aSize * 0.6, { stroke: arrowColor, strokeWidth: 2 });
+          rc.line(arrowEndX, centerY, arrowEndX - aSize, centerY + aSize * 0.6, { stroke: arrowColor, strokeWidth: 2 });
         }
       });
       break;
@@ -1254,6 +1921,7 @@ export function renderModel(
 
     case 'balance': {
       // Balance Scale (Trade-off)
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 480, height / 320)));
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -1263,64 +1931,75 @@ export function renderModel(
       });
 
       const cx = x + width / 2;
-      const fulcrumY = y + height - 70;
+      const fulcrumH = Math.max(22, Math.min(65, height * 0.2));
+      const fulcrumBaseY = y + height - Math.max(14, height * 0.1);
+      const fulcrumTopY = fulcrumBaseY - fulcrumH;
 
       // Fulcrum Triangle
       rc.polygon(
         [
-          [cx, fulcrumY - 40],
-          [cx + 25, fulcrumY + 20],
-          [cx - 25, fulcrumY + 20],
+          [cx, fulcrumTopY],
+          [cx + fulcrumH * 0.45, fulcrumBaseY],
+          [cx - fulcrumH * 0.45, fulcrumBaseY],
         ],
-        { stroke: color, strokeWidth: 2.5, fill: '#cbd5e1', fillStyle: 'solid', roughness: 1.3 }
+        { stroke: color, strokeWidth: Math.max(1.8, 2.5 * scale), fill: '#cbd5e1', fillStyle: 'solid', roughness: 1.3 }
       );
 
       // Tilted beam
-      const beamW = width * 0.75;
-      const angle = -0.06; // slight tilt favoring right side
+      const beamW = Math.max(50, width * 0.72);
+      const angle = -0.06;
       const leftX = cx - (beamW / 2) * Math.cos(angle);
-      const leftY = fulcrumY - 40 - (beamW / 2) * Math.sin(angle);
+      const leftY = fulcrumTopY - (beamW / 2) * Math.sin(angle);
       const rightX = cx + (beamW / 2) * Math.cos(angle);
-      const rightY = fulcrumY - 40 + (beamW / 2) * Math.sin(angle);
+      const rightY = fulcrumTopY + (beamW / 2) * Math.sin(angle);
 
-      rc.line(leftX, leftY, rightX, rightY, { stroke: color, strokeWidth: 3.5, roughness: 1.2 });
+      rc.line(leftX, leftY, rightX, rightY, { stroke: color, strokeWidth: Math.max(2, 3.5 * scale), roughness: 1.2 });
+
+      // Pan drop and widths
+      const panDrop = Math.max(14, Math.min(50, height * 0.16));
+      const panW = Math.max(24, Math.min(75, beamW * 0.16));
+      const itemFont = Math.max(8, Math.min(16, Math.round(15 * scale)));
+      const descFont = Math.max(7, Math.min(13, Math.round(13 * scale)));
+      const verdictFont = Math.max(9, Math.min(16, Math.round(15 * scale)));
 
       // Left pan
-      rc.line(leftX, leftY, leftX - 16, leftY + 50, { stroke: '#94a3b8', strokeWidth: 1.5 });
-      rc.line(leftX, leftY, leftX + 16, leftY + 50, { stroke: '#94a3b8', strokeWidth: 1.5 });
-      rc.line(leftX - 35, leftY + 50, leftX + 35, leftY + 50, { stroke: color, strokeWidth: 2.5 });
+      rc.line(leftX, leftY, leftX - panW * 0.25, leftY + panDrop, { stroke: '#94a3b8', strokeWidth: 1.5 });
+      rc.line(leftX, leftY, leftX + panW * 0.25, leftY + panDrop, { stroke: '#94a3b8', strokeWidth: 1.5 });
+      rc.line(leftX - panW / 2, leftY + panDrop, leftX + panW / 2, leftY + panDrop, { stroke: color, strokeWidth: 2.5 });
 
       // Right pan
-      rc.line(rightX, rightY, rightX - 16, rightY + 50, { stroke: '#94a3b8', strokeWidth: 1.5 });
-      rc.line(rightX, rightY, rightX + 16, rightY + 50, { stroke: '#94a3b8', strokeWidth: 1.5 });
-      rc.line(rightX - 35, rightY + 50, rightX + 35, rightY + 50, { stroke: color, strokeWidth: 2.5 });
+      rc.line(rightX, rightY, rightX - panW * 0.25, rightY + panDrop, { stroke: '#94a3b8', strokeWidth: 1.5 });
+      rc.line(rightX, rightY, rightX + panW * 0.25, rightY + panDrop, { stroke: '#94a3b8', strokeWidth: 1.5 });
+      rc.line(rightX - panW / 2, rightY + panDrop, rightX + panW / 2, rightY + panDrop, { stroke: color, strokeWidth: 2.5 });
 
       // Left item text
       ctx.textAlign = 'center';
-      ctx.font = "bold 15px 'Outfit', sans-serif";
+      ctx.textBaseline = 'top';
+      ctx.font = `bold ${itemFont}px 'Outfit', sans-serif`;
       ctx.fillStyle = '#dc2626';
-      ctx.fillText(data.leftItem || 'Cost & Effort', leftX, leftY + 75);
-      ctx.font = "13px 'Patrick Hand', cursive";
+      ctx.fillText(data.leftItem || 'Cost & Effort', leftX, leftY + panDrop + Math.max(6, 12 * scale));
+      ctx.font = `${descFont}px 'Patrick Hand', cursive`;
       ctx.fillStyle = '#64748b';
-      ctx.fillText(data.leftWeight || 'Current Burden', leftX, leftY + 95);
+      ctx.fillText(data.leftWeight || 'Current Burden', leftX, leftY + panDrop + Math.max(6, 12 * scale) + itemFont + 2);
 
       // Right item text
-      ctx.font = "bold 15px 'Outfit', sans-serif";
+      ctx.font = `bold ${itemFont}px 'Outfit', sans-serif`;
       ctx.fillStyle = '#16a34a';
-      ctx.fillText(data.rightItem || 'Future Growth', rightX, rightY + 75);
-      ctx.font = "13px 'Patrick Hand', cursive";
+      ctx.fillText(data.rightItem || 'Future Growth', rightX, rightY + panDrop + Math.max(6, 12 * scale));
+      ctx.font = `${descFont}px 'Patrick Hand', cursive`;
       ctx.fillStyle = '#64748b';
-      ctx.fillText(data.rightWeight || '10x Upside', rightX, rightY + 95);
+      ctx.fillText(data.rightWeight || '10x Upside', rightX, rightY + panDrop + Math.max(6, 12 * scale) + itemFont + 2);
 
       // Verdict badge
-      ctx.font = "bold 15px 'Patrick Hand', cursive";
+      ctx.font = `bold ${verdictFont}px 'Patrick Hand', cursive`;
       ctx.fillStyle = '#0f172a';
-      ctx.fillText(data.verdict || 'Decision: Worth it!', cx, y + 28);
+      ctx.fillText(data.verdict || 'Decision: Worth it!', cx, y + Math.max(10, height * 0.08));
       break;
     }
 
     case 'venn': {
       // 2-Circle Venn Diagram
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 460, height / 320)));
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -1329,15 +2008,16 @@ export function renderModel(
         roughness: 1.2,
       });
 
-      const radius = Math.min(width, height) * 0.35;
+      const radius = Math.max(20, Math.min(width * 0.28, height * 0.36));
       const cy = y + height / 2;
-      const c1X = x + width * 0.38;
-      const c2X = x + width * 0.62;
+      const cOffset = radius * 0.58;
+      const c1X = x + width / 2 - cOffset;
+      const c2X = x + width / 2 + cOffset;
 
       // Circle 1
       rc.circle(c1X, cy, radius * 2, {
         stroke: '#2563eb',
-        strokeWidth: 2.5,
+        strokeWidth: Math.max(1.8, 2.5 * scale),
         fill: 'rgba(59, 130, 246, 0.1)',
         fillStyle: 'solid',
         roughness: 1.4,
@@ -1346,30 +2026,34 @@ export function renderModel(
       // Circle 2
       rc.circle(c2X, cy, radius * 2, {
         stroke: '#059669',
-        strokeWidth: 2.5,
+        strokeWidth: Math.max(1.8, 2.5 * scale),
         fill: 'rgba(16, 185, 129, 0.1)',
         fillStyle: 'solid',
         roughness: 1.4,
       });
 
       // Labels
+      const lblFont = Math.max(8, Math.min(17, Math.round(15 * scale)));
+      const sweetFont = Math.max(7, Math.min(14, Math.round(13 * scale)));
       ctx.textAlign = 'center';
-      ctx.font = "bold 15px 'Outfit', sans-serif";
+      ctx.textBaseline = 'middle';
+      ctx.font = `bold ${lblFont}px 'Outfit', sans-serif`;
       ctx.fillStyle = '#1d4ed8';
-      ctx.fillText(data.leftLabel || 'What Users Love', c1X - 35, cy - 10);
+      ctx.fillText(data.leftLabel || 'What Users Love', c1X - radius * 0.32, cy - Math.max(4, 8 * scale));
 
       ctx.fillStyle = '#047857';
-      ctx.fillText(data.rightLabel || 'What Is Feasible', c2X + 35, cy - 10);
+      ctx.fillText(data.rightLabel || 'What Is Feasible', c2X + radius * 0.32, cy - Math.max(4, 8 * scale));
 
       // Sweet Spot in intersection
       ctx.fillStyle = '#b45309';
-      ctx.font = "bold 13px 'Patrick Hand', cursive";
-      ctx.fillText(data.sweetSpot || 'SWEET SPOT', (c1X + c2X) / 2, cy);
+      ctx.font = `bold ${sweetFont}px 'Patrick Hand', cursive`;
+      ctx.fillText(data.sweetSpot || 'SWEET SPOT', x + width / 2, cy);
       break;
     }
 
     case 'scurve': {
       // S-Curve Growth lifecycle
+      const scale = Math.max(0.4, Math.min(2.5, Math.min(width / 500, height / 280)));
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -1378,20 +2062,25 @@ export function renderModel(
         roughness: 1.2,
       });
 
-      const startX = x + 50;
-      const endX = x + width - 40;
-      const baseY = y + height - 50;
-      const topY = y + 50;
+      const padLeft = Math.max(24, Math.min(60, width * 0.1));
+      const padRight = Math.max(16, Math.min(45, width * 0.08));
+      const padBottom = Math.max(22, Math.min(55, height * 0.18));
+      const padTop = Math.max(22, Math.min(50, height * 0.18));
+
+      const startX = x + padLeft;
+      const endX = x + width - padRight;
+      const baseY = y + height - padBottom;
+      const topY = y + padTop;
 
       // Axes
-      rc.line(startX, topY, startX, baseY, { stroke: color, strokeWidth: 2 });
-      rc.line(startX, baseY, endX, baseY, { stroke: color, strokeWidth: 2 });
+      rc.line(startX, topY, startX, baseY, { stroke: color, strokeWidth: Math.max(1.5, 2 * scale) });
+      rc.line(startX, baseY, endX, baseY, { stroke: color, strokeWidth: Math.max(1.5, 2 * scale) });
 
       // Sigmoid S-Curve path
       const curvePts: [number, number][] = [];
       const totalSteps = 40;
       for (let i = 0; i <= totalSteps; i++) {
-        const t = (i / totalSteps) * 6 - 3; // -3 to 3
+        const t = (i / totalSteps) * 6 - 3;
         const sig = 1 / (1 + Math.exp(-t));
         const px = startX + (i / totalSteps) * (endX - startX);
         const py = baseY - sig * (baseY - topY);
@@ -1400,7 +2089,7 @@ export function renderModel(
 
       ctx.save();
       ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 3.5;
+      ctx.lineWidth = Math.max(2, 3.5 * scale);
       ctx.beginPath();
       ctx.moveTo(curvePts[0][0], curvePts[0][1]);
       for (let i = 1; i < curvePts.length; i++) {
@@ -1410,23 +2099,27 @@ export function renderModel(
       ctx.restore();
 
       // Phases
+      const phaseFont = Math.max(8, Math.min(15, Math.round(13 * scale)));
+      const calloutFont = Math.max(8, Math.min(15, Math.round(13 * scale)));
       ctx.fillStyle = '#475569';
-      ctx.font = "13px 'Patrick Hand', cursive";
+      ctx.font = `${phaseFont}px 'Patrick Hand', cursive`;
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
       const phases = data.phases || ['1. Inception', '2. Growth', '3. Scale'];
-      ctx.fillText(phases[0], startX + 50, baseY + 20);
-      ctx.fillText(phases[1], startX + (endX - startX) * 0.5, baseY + 20);
-      ctx.fillText(phases[2], endX - 50, baseY + 20);
+      ctx.fillText(phases[0], startX + (endX - startX) * 0.15, baseY + Math.max(4, 8 * scale));
+      ctx.fillText(phases[1], startX + (endX - startX) * 0.5, baseY + Math.max(4, 8 * scale));
+      ctx.fillText(phases[2], startX + (endX - startX) * 0.85, baseY + Math.max(4, 8 * scale));
 
       // Inflection callout
       ctx.fillStyle = '#dc2626';
-      ctx.font = "bold 13px 'Outfit', sans-serif";
-      ctx.fillText(data.inflectionPoint || 'Inflection Point', startX + (endX - startX) * 0.5, topY + 40);
+      ctx.font = `bold ${calloutFont}px 'Outfit', sans-serif`;
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(data.inflectionPoint || 'Inflection Point', startX + (endX - startX) * 0.5, topY + Math.max(16, 28 * scale));
       break;
     }
 
     case 'stickmanScene': {
-      // Stakeholder Trio
+      // Stakeholder Trio / Character Scene
       rc.rectangle(x, y, width, height, {
         stroke: '#e2e8f0',
         strokeWidth: 1.5,
@@ -1437,34 +2130,88 @@ export function renderModel(
 
       const chars = data.characters || [];
       const cardW = (width - 40) / (chars.length || 1);
+      const charScale = Math.max(0.45, Math.min(2.0, Math.min(cardW / 140, height / 270)));
 
       chars.forEach((c: any, i: number) => {
         const cx = x + 20 + i * cardW + cardW / 2;
 
-        // Stickman head & body
-        rc.circle(cx, y + 60, 36, { stroke: color, strokeWidth: 2, roughness: 1.4 });
-        rc.line(cx, y + 78, cx, y + 130, { stroke: color, strokeWidth: 2.2 });
-        // Arms
-        rc.line(cx - 24, y + 96, cx + 24, y + 96, { stroke: color, strokeWidth: 2 });
-        // Legs
-        rc.line(cx, y + 130, cx - 20, y + 175, { stroke: color, strokeWidth: 2 });
-        rc.line(cx, y + 130, cx + 20, y + 175, { stroke: color, strokeWidth: 2 });
+        const headY = y + Math.max(18, height * 0.22);
+        const headR = Math.max(10, Math.min(26, 18 * charScale));
+        const bodyLen = Math.max(18, Math.min(65, 52 * charScale));
+        const bodyTop = headY + headR;
+        const pelvisY = bodyTop + bodyLen;
+        const armY = bodyTop + bodyLen * 0.35;
+        const armSpan = Math.max(12, Math.min(36, 24 * charScale));
+        const legLen = Math.max(16, Math.min(55, 45 * charScale));
+        const legSpread = Math.max(10, Math.min(30, 20 * charScale));
 
-        // Emoji badge
-        ctx.font = "22px sans-serif";
+        // Stickman head & body
+        rc.circle(cx, headY, headR * 2, { stroke: color, strokeWidth: Math.max(1.5, 2 * charScale), roughness: 1.4 });
+        rc.line(cx, bodyTop, cx, pelvisY, { stroke: color, strokeWidth: Math.max(1.6, 2.2 * charScale) });
+        // Arms
+        rc.line(cx - armSpan, armY, cx + armSpan, armY, { stroke: color, strokeWidth: Math.max(1.5, 2 * charScale) });
+        // Legs
+        rc.line(cx, pelvisY, cx - legSpread, pelvisY + legLen, { stroke: color, strokeWidth: Math.max(1.5, 2 * charScale) });
+        rc.line(cx, pelvisY, cx + legSpread, pelvisY + legLen, { stroke: color, strokeWidth: Math.max(1.5, 2 * charScale) });
+
+        // Emoji badge inside/above head
+        const emojiSize = Math.max(12, Math.min(30, Math.round(22 * charScale)));
+        ctx.font = `${emojiSize}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(c.emoji || '🧑‍💻', cx, y + 66);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c.emoji || '🧑‍💻', cx, headY);
 
         // Role title
-        ctx.font = "bold 16px 'Outfit', sans-serif";
+        const roleFont = Math.max(8, Math.min(18, Math.round(15 * charScale)));
+        ctx.font = `bold ${roleFont}px 'Outfit', sans-serif`;
         ctx.fillStyle = '#0f172a';
-        ctx.fillText(c.role, cx, y + 205);
+        ctx.textBaseline = 'top';
+        const roleY = pelvisY + legLen + Math.max(6, 12 * charScale);
+        ctx.fillText(c.role || '', cx, roleY);
 
         // Note
-        ctx.font = "14px 'Patrick Hand', cursive";
-        ctx.fillStyle = '#64748b';
-        ctx.fillText(c.note, cx, y + 230);
+        const noteFont = Math.max(7, Math.min(14, Math.round(13 * charScale)));
+        const noteY = roleY + roleFont + Math.max(2, 4 * charScale);
+        if (noteY + noteFont <= y + height - 4) {
+          ctx.font = `${noteFont}px 'Patrick Hand', cursive`;
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(c.note || '', cx, noteY);
+        }
       });
+      break;
+    }
+
+    default: {
+      // Graceful fallback for any generic or cognitive model card
+      rc.rectangle(x, y, width, height, {
+        stroke: color || '#94a3b8',
+        strokeWidth: 2,
+        fill: fillColor || '#ffffff',
+        fillStyle: 'solid',
+        roughness: 1.3,
+      });
+
+      const mScale = Math.max(0.4, Math.min(2.0, Math.min(width / 400, height / 250)));
+      const tFont = Math.max(10, Math.min(20, Math.round(16 * mScale)));
+      ctx.fillStyle = '#0f172a';
+      ctx.font = `bold ${tFont}px 'Outfit', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(model.title || model.modelKind, x + width / 2, y + Math.max(8, 14 * mScale));
+
+      if (data?.text || data?.desc || data?.summary) {
+        const bodyTxt = data.text || data.desc || data.summary;
+        const bFont = Math.max(8, Math.min(15, Math.round(13 * mScale)));
+        ctx.font = `${bFont}px 'Patrick Hand', cursive`;
+        ctx.fillStyle = '#475569';
+        const lines = wrapCanvasText(ctx, bodyTxt, width - 24);
+        let cy = y + Math.max(16, 20 * mScale) + tFont;
+        for (const line of lines) {
+          if (cy + bFont * 1.3 > y + height - 8) break;
+          ctx.fillText(line, x + width / 2, cy);
+          cy += bFont * 1.3;
+        }
+      }
       break;
     }
   }
@@ -1486,6 +2233,13 @@ export function renderStamp(
   stamp: StampElement
 ) {
   ctx.save();
+  if (stamp.rotation) {
+    const cx = stamp.x + stamp.size / 2;
+    const cy = stamp.y + stamp.size / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(stamp.rotation);
+    ctx.translate(-cx, -cy);
+  }
   const { x, y, size, color, stampIcon, label } = stamp;
 
   // Themed color palettes so each stamp has a distinctive visual personality
